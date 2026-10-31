@@ -1,0 +1,123 @@
+name: PING TEST · Signed Android OTA
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'PING_TEST_SOURCE.zip'
+      - 'app/**'
+      - 'scripts/**'
+      - 'release_notes/**'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'gradle.properties'
+      - '.github/workflows/ota-release.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ping-test-signed-ota
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v4
+
+      - name: Import first Android source archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f app/build.gradle ]]; then
+            test -s PING_TEST_SOURCE.zip || {
+              echo "::error::First upload PING_TEST_SOURCE.zip to the repository root."
+              exit 1
+            }
+            unzip -oq PING_TEST_SOURCE.zip
+            test -f app/build.gradle
+            test -f scripts/sign_release.py
+            test -f scripts/make_manifest.py
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -- app build.gradle settings.gradle gradle.properties scripts release_notes .gitignore README.md
+            if ! git diff --cached --quiet; then
+              git commit -m "chore: import PING TEST v1.5.0 Android source"
+              git push origin HEAD:main
+            fi
+          fi
+
+      - name: Check permanent signing secret
+        env:
+          PING_TEST_SIGNING_BUNDLE: ${{ secrets.PING_TEST_SIGNING_BUNDLE }}
+        shell: bash
+        run: |
+          if [[ -z "$PING_TEST_SIGNING_BUNDLE" ]]; then
+            echo "::error::Missing PING_TEST_SIGNING_BUNDLE: create it in repository Actions secrets."
+            exit 1
+          fi
+
+      - name: Configure Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android build tools
+        run: sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0'
+
+      - name: Configure Gradle 9.6.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.1'
+
+      - name: Compile Android release
+        run: gradle --no-daemon :app:assembleRelease
+
+      - name: Sign and verify APK
+        env:
+          PING_TEST_SIGNING_BUNDLE: ${{ secrets.PING_TEST_SIGNING_BUNDLE }}
+        run: python3 scripts/sign_release.py
+
+      - name: Generate update.json
+        id: metadata
+        run: python3 scripts/make_manifest.py
+
+      - name: Check release files
+        run: |
+          set -euo pipefail
+          test -s dist/PING-TEST.apk
+          python3 -m json.tool dist/update.json >/dev/null
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PING-TEST-OTA
+          path: |
+            dist/PING-TEST.apk
+            dist/update.json
+          if-no-files-found: error
+
+      - name: Publish official Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.metadata.outputs.tag }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release $TAG already exists. Bump versionCode AND versionName before publishing again."
+            exit 1
+          fi
+          gh release create "$TAG" dist/PING-TEST.apk dist/update.json \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "PING TEST $VERSION" --notes-file "release_notes/$TAG.txt" --latest
+          for asset in PING-TEST.apk update.json; do
+            gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+              --jq '.assets[].name' | grep -Fxq "$asset"
+          done
