@@ -73,6 +73,8 @@ public final class MainActivity extends Activity {
         else getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         if(Build.VERSION.SDK_INT>=29)getWindow().setNavigationBarContrastEnforced(false);
         showTab(0);
+        OtaUpdateSchedule.configure(this);
+        if(getSharedPreferences("settings",0).getBoolean(OtaUpdateSchedule.PREF_ON_LAUNCH,false))handler.postDelayed(()->UpdateManager.check(this),1900L);
         if(Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},101);
     }
