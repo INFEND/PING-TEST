@@ -1,0 +1,96 @@
+package com.xarkon.pingtest;
+
+import android.animation.ValueAnimator;
+import android.content.Context;
+import android.graphics.*;
+import android.view.View;
+import android.view.animation.DecelerateInterpolator;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+
+/** Realtime RTT chart, quality-colored samples, error markers and animated latest sample. */
+public final class GraphView extends View {
+    private float[] points=new float[0];
+    private float progress=1f, previous=-1;
+    private int accent=0xff55dfcb,bg=0xff0b0b0d;
+    private ValueAnimator animator;
+    private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+    public GraphView(Context c){super(c);}
+    public void setData(List<Float> values,int color,int background){
+        float[] fresh=new float[values.size()];for(int i=0;i<fresh.length;i++)fresh[i]=values.get(i);
+        if(Arrays.equals(points,fresh)&&accent==color&&bg==background)return;
+        boolean newSample=points.length>0&&fresh.length>0&&(fresh.length!=points.length||fresh[fresh.length-1]!=points[points.length-1]);
+        previous=points.length>0?points[points.length-1]:-1;
+        points=fresh;accent=color;bg=background;
+        if(animator!=null)animator.cancel();
+        if(newSample&&AppPrefs.bool(getContext(),"motion",true)&&fresh.length>0){
+            progress=0f;animator=ValueAnimator.ofFloat(0f,1f);animator.setDuration(180);
+            animator.setInterpolator(new DecelerateInterpolator(1.2f));
+            animator.addUpdateListener(v->{progress=(Float)v.getAnimatedValue();invalidate();});animator.start();
+        }else progress=1f;
+        invalidate();
+    }
+    @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);
+        float[] animated=points;
+        if(points.length>0&&progress<1f&&previous>=0&&points[points.length-1]>=0){
+            animated=Arrays.copyOf(points,points.length);
+            animated[points.length-1]=previous+(points[points.length-1]-previous)*progress;
+        }
+        render(canvas,getWidth(),getHeight(),animated,accent,bg);
+    }
+    public static void render(Canvas c,int w,int h,float[] v,int accent,int background){
+        if(w<=0||h<=0)return;
+        Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
+        c.drawColor(background);
+        float density=h/145f;
+        float left=38*density,right=w-13*density,top=15*density,bottom=h-23*density;
+        if(right<=left+5||bottom<=top+5)return;
+        float max=30;for(float r:v)if(r>max)max=r;
+        double power=Math.pow(10,Math.floor(Math.log10(max/3.0)));
+        float step=(float)(Math.ceil((max*1.14/3.0)/power)*power);max=Math.max(3,step*3);
+        p.setStrokeWidth(Math.max(1f,.65f*density));
+        for(int k=0;k<=3;k++){
+            float y=top+(bottom-top)*k/3f;
+            p.setColor(0xff28303a);c.drawLine(left,y,right,y,p);
+            p.setColor(0xff8b98a5);p.setTextSize(10*density);
+            c.drawText(String.format(Locale.US,"%.0f",max*(3-k)/3),4*density,y+3*density,p);
+        }
+        if(v.length==0){p.setColor(0xff9ba8b1);p.setTextSize(12*density);
+            c.drawText("Ожидание измерений",left+10*density,h/2f,p);return;}
+        float spacing=v.length>1?(right-left)/(v.length-1):0;
+        for(int i=0;i<v.length;i++){
+            float x=v.length==1?left:left+i*spacing;
+            if(v[i]<0){
+                p.setColor(QualityColors.RED);p.setStrokeWidth(1.6f*density);
+                c.drawLine(x-3*density,bottom-5*density,x+3*density,bottom+1*density,p);
+                c.drawLine(x+3*density,bottom-5*density,x-3*density,bottom+1*density,p);
+                continue;
+            }
+            float y=bottom-(bottom-top)*Math.min(1f,Math.max(0,v[i]/max));
+            int color=QualityColors.rtt(v[i]);
+            if(i>0&&v[i-1]>=0){
+                float px=left+(i-1)*spacing;
+                float py=bottom-(bottom-top)*Math.min(1f,Math.max(0,v[i-1]/max));
+                Path area=new Path();area.moveTo(px,bottom);area.lineTo(px,py);area.lineTo(x,y);area.lineTo(x,bottom);area.close();
+                p.setStyle(Paint.Style.FILL);p.setColor((color&0x00ffffff)|0x1D000000);
+                c.drawPath(area,p);
+                p.setStrokeCap(Paint.Cap.ROUND);
+                p.setStrokeWidth(Math.max(4f,4.4f*density));p.setColor((color&0x00ffffff)|0x26000000);
+                c.drawLine(px,py,x,y,p);
+                p.setStrokeWidth(Math.max(1.7f,2f*density));p.setColor(QualityColors.blend(QualityColors.rtt(v[i-1]),color,.5f));
+                c.drawLine(px,py,x,y,p);
+            }
+        }
+        for(int i=v.length-1;i>=0;i--)if(v[i]>=0){
+            float x=v.length==1?left:left+i*spacing;
+            float y=bottom-(bottom-top)*Math.min(1f,Math.max(0,v[i]/max));
+            int col=QualityColors.rtt(v[i]);
+            p.setColor((col&0x00ffffff)|0x35000000);c.drawCircle(x,y,6*density,p);
+            p.setColor(col);c.drawCircle(x,y,3*density,p);break;
+        }
+        p.setColor(0xff8b98a5);p.setTextSize(10*density);
+        c.drawText("0",left,h-5*density,p);
+        String label=v.length+" пак.";c.drawText(label,right-p.measureText(label),h-5*density,p);
+    }
+}

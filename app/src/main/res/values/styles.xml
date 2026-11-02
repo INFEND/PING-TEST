@@ -1,0 +1,19 @@
+<resources>
+    <style name="Theme.PingTest" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:colorAccent">#55DFCB</item>
+        <item name="android:windowBackground">#000000</item>
+        <item name="android:alertDialogTheme">@style/Theme.PingTest.Dialog</item>
+    </style>
+    <style name="Theme.PingTest.Dialog" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:windowBackground">#101215</item>
+        <item name="android:colorAccent">#55DFCB</item>
+        <item name="android:textColorPrimary">#F5F7F9</item>
+        <item name="android:textColorSecondary">#9BA8B1</item>
+    </style>
+</resources>

@@ -1,22 +1,17 @@
-# PING TEST · Android OTA
+# PING TEST · Official Android OTA
 
-Официальный исходный репозиторий Android-приложения PING TEST.
+Исходный Android-проект PING TEST 1.5.0 с автоматической сборкой APK в GitHub Actions.
 
-## Первый импорт и подпись
+## OTA
 
-1. В Settings → Secrets and variables → Actions создайте **Repository secret** `PING_TEST_SIGNING_BUNDLE`. Значение предоставлено владельцу в отдельном приватном файле и не должно публиковаться.
-2. Загрузите в корень репозитория файл **PING_TEST_SOURCE.zip** (источник версии 1.5.0).
-3. GitHub Actions автоматически распакует проект, добавит исходники в `main`, соберёт и подпишет APK, проверит сертификат и создаст GitHub Release.
-
-После первой публикации исходники будут редактироваться напрямую в `app/`. Для новой версии обязательно увеличивайте `versionCode` и `versionName` в `app/build.gradle`.
-
-## Адреса OTA
-
+- Репозиторий: https://github.com/INFEND/PING-TEST
 - APK: https://github.com/INFEND/PING-TEST/releases/latest/download/PING-TEST.apk
 - Манифест: https://github.com/INFEND/PING-TEST/releases/latest/download/update.json
-- Публикации: https://github.com/INFEND/PING-TEST/releases
-- Автоматические сборки: https://github.com/INFEND/PING-TEST/actions
+- Android ID: `com.xarkon.pingtest`
+- Подпись закреплена в `UpdateManager.java`. Один раз создайте Actions Secret `PING_TEST_SIGNING_BUNDLE` из персонального файла, предоставленного владельцу отдельно.
+- `push` в `main` или `Run workflow` запускает Gradle 9.6.1, затем `zipalign`, `apksigner`, генерацию манифеста и GitHub Release.
+- Для каждого нового релиза повышайте `versionName` и `versionCode` в `app/build.gradle`.
 
-Первое обновление с APK, собранного в Code on the Go с debug-подписью, может потребовать удаления старого APK. Сохраните историю и настройки, если они важны: при удалении APK его локальные данные могут пропасть.
+Первое обновление с debug APK Code on the Go до официального release APK потребует резервной копии данных и удаления старой debug-версии: подписи несовместимы. Последующие официальные обновления устанавливаются поверх прежних.
 
-**Без секрета подписи выпуск релиза намеренно блокируется.** Приватный ключ не хранится в репозитории.
+Первая публикация невозможна без Actions Secret. Частный ключ никогда не публикуется в репозитории.
