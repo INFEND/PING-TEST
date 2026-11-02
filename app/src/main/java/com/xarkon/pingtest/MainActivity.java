@@ -665,9 +665,10 @@ public final class MainActivity extends Activity {
         p.addView(Ui.text(this,"PING TEST проверяет обновления только в официальном репозитории INFEND/PING-TEST.",12,Ui.muted(),false));
         TextView check=Ui.button(this,"ПРОВЕРИТЬ ОБНОВЛЕНИЯ",true);p.addView(check,Ui.margins(-1,-2,0,10));
         check.setOnClickListener(v->UpdateManager.check(this));
+        OtaOptions.attach(this,p,this::redrawSettings);
     }
     private void about(LinearLayout p){
-        p.addView(Ui.text(this,"PING TEST · 1.5.0",17,Ui.fg(),true));
+        p.addView(Ui.text(this,"PING TEST · 1.5.1",17,Ui.fg(),true));
         p.addView(Ui.text(this,"Java 17 · Code on the Go · Android "+Build.VERSION.RELEASE,12,Ui.muted(),false));
         p.addView(Ui.text(this,"Проверка измеряет ответы выбранного узла. При активном VPN результаты относятся к маршруту через VPN. Некоторые сайты и серверы не отвечают на ping: отсутствие ICMP-ответа не означает, что игра или сайт недоступны.",12,Ui.muted(),false),Ui.margins(-1,-2,9,0));
     }
