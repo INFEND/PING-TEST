@@ -1,161 +1,312 @@
 package com.xarkon.pingtest;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.ClipData;
-import android.content.Context;
-import android.content.Intent;
+import android.content.*;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.net.Uri;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import javax.net.ssl.SSLException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import android.os.Build;
 import android.provider.Settings;
-import android.widget.ProgressBar;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-import android.widget.Toast;
 import org.json.JSONObject;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.IOException;
-import java.net.URL;
-import java.net.HttpURLConnection;
+import org.json.JSONArray;
+import java.util.ArrayList;
+import java.util.List;
+import java.io.*;
+import java.net.*;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Locale;
+import javax.net.ssl.HttpsURLConnection;
 
-/** Pin official GitHub channel and signing certificate. All network I/O stays off main thread. */
+/** Secure user-initiated update checker for an HTTPS manifest and a single APK. */
 public final class UpdateManager {
     private UpdateManager(){}
-    public static final String MANIFEST_URL="https://github.com/INFEND/PING-TEST/releases/latest/download/update.json";
-    private static final String RELEASE_PREFIX="https://github.com/INFEND/PING-TEST/releases/download/";
-    private static final String PACKAGE="com.xarkon.pingtest";
-    private static final String CERT="C17E87ED0E0EB7E9D96CE71F91804AE8A0F8BCAD5065C464342E2FA5F4026802";
-    private static final long LIMIT=250L*1024*1024;
-    private static final String FILENAME="PING-TEST.apk";
-    private static class Release {
-        final int code;
-        final String version,url,sha,notes;
-        final long bytes;
+    /** This is the only official OTA channel. No editable source or alternate endpoint. */
+    public static final String MANIFEST_URL=OtaUrlPolicy.LEGACY_MANIFEST;
+    public static final String TRUSTED_CERT_SHA256="C17E87ED0E0EB7E9D96CE71F91804AE8A0F8BCAD5065C464342E2FA5F4026802";
+    private static final long MAX_APK=512L*1024L*1024L;
+    // Only the two pinned slugs of this repository are accepted after its rename.
+    public static final String APK_FILE="ping_test_update.apk";
+    public interface Callback {
+        void status(String message);
+        default void progress(long transferred,long total){}
+        void release(Release info, boolean newer);
+        void downloaded(File file);
+        void error(String message);
+    }
+    public static final class Release {
+        public final long versionCode;
+        public final String versionName,apkUrl,sha256,notes,packageName;
+        public final long sizeBytes;
+        private final List<OtaHistory.Entry> history;
+        public String notesFor(long installedVersionCode){
+            return OtaHistory.merge(history,installedVersionCode,versionCode,notes);
+        }
         Release(JSONObject j)throws Exception {
-            if(j.optInt("schema",0)!=1 || !PACKAGE.equals(j.optString("packageName")))throw new IOException("Некорректный OTA-манифест");
-            code=j.getInt("versionCode");version=j.getString("versionName");
-            sha=j.getString("sha256").toLowerCase(Locale.US);url=j.getString("apkUrl");
-            bytes=j.getLong("sizeBytes");notes=j.optString("notes","");
-            if(code<=0||!version.matches("[0-9]+\\.[0-9]+\\.[0-9]+")||!sha.matches("[a-f0-9]{64}")||bytes<1||bytes>LIMIT||notes.length()>5000)
-                throw new IOException("Некорректные параметры обновления");
-            if(!url.equals(RELEASE_PREFIX+"v"+version+"/"+FILENAME))throw new IOException("Неофициальный адрес APK");
+            if(j.has("schema") && j.getInt("schema")!=1)throw new IOException("Неподдерживаемый формат OTA");
+            packageName=j.optString("packageName","com.xarkon.pingtest");
+            if(!"com.xarkon.pingtest".equals(packageName))throw new IOException("Ошибка идентификатора приложения");
+            versionCode=j.getLong("versionCode");
+            versionName=j.optString("versionName","Новая версия");
+            apkUrl=j.getString("apkUrl");
+            sha256=j.getString("sha256").toLowerCase(Locale.US);
+            notes=j.optString("notes","");
+            sizeBytes=j.optLong("sizeBytes",-1L);
+            if(versionCode<1||!sha256.matches("[0-9a-f]{64}")||
+                !versionName.matches("[A-Za-z0-9._-]{1,40}")||
+                sizeBytes==0||sizeBytes < -1||sizeBytes>MAX_APK||notes.length()>100_000)
+                throw new IOException("Недействительные метаданные OTA");
+            if(!OtaUrlPolicy.trustedApk(apkUrl,versionName))
+                throw new IOException("APK размещён вне официального канала");
+            List<OtaHistory.Entry> entries=new ArrayList<>();
+            JSONArray versions=j.optJSONArray("history");
+            if(versions!=null&&versions.length()<=500){
+                for(int i=0;i<versions.length();i++){
+                    JSONObject item=versions.optJSONObject(i);
+                    if(item==null){entries.clear();break;}
+                    entries.add(new OtaHistory.Entry(item.optLong("versionCode",0),
+                        item.optString("versionName",""),item.optString("notes","")));
+                }
+            }
+            history=entries;
         }
     }
-    public static File apkFile(Context c){return new File(new File(c.getFilesDir(),"ota"),FILENAME);}
-    private static HttpURLConnection open(String url)throws Exception {
+    private static void checkHttps(String url)throws IOException{
         URL u=new URL(url);
-        if(!"https".equalsIgnoreCase(u.getProtocol())||!"github.com".equalsIgnoreCase(u.getHost()))throw new IOException("Недоверенный сервер");
-        HttpURLConnection c=(HttpURLConnection)u.openConnection();
-        c.setConnectTimeout(15000);c.setReadTimeout(25000);c.setRequestProperty("User-Agent","PING-TEST-OTA/1.0");
-        if(c.getResponseCode()!=200){int status=c.getResponseCode();c.disconnect();throw new IOException("GitHub: HTTP "+status);}
-        return c;
+        if(!"https".equalsIgnoreCase(u.getProtocol())||u.getHost()==null||u.getHost().isEmpty())
+            throw new IOException("Нужна прямая HTTPS-ссылка");
     }
-    private static Release latest()throws Exception {
-        HttpURLConnection c=open(MANIFEST_URL);
-        try(InputStream in=c.getInputStream();ByteArrayOutputStream out=new ByteArrayOutputStream()) {
-            byte[] b=new byte[8192];int n;
-            while((n=in.read(b))!=-1){if(out.size()+n>65536)throw new IOException("Слишком большой OTA-манифест");out.write(b,0,n);}
-            return new Release(new JSONObject(out.toString("UTF-8")));
+    public static File apkFile(Context c){return new File(new File(c.getFilesDir(),"ota"),APK_FILE);}
+    private static void internetReady(Context c)throws IOException{
+        ConnectivityManager cm=(ConnectivityManager)c.getSystemService(Context.CONNECTIVITY_SERVICE);
+        Network network=cm==null?null:cm.getActiveNetwork();
+        NetworkCapabilities caps=network==null?null:cm.getNetworkCapabilities(network);
+        if(caps==null||!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET))
+            throw new IOException("Нет подключения к интернету. Включите Wi-Fi или мобильные данные.");
+        try{InetAddress.getAllByName("github.com");}
+        catch(UnknownHostException e){
+            if(!caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED))
+                throw new IOException("Сеть подключена, но интернет или DNS недоступны. Проверьте Wi-Fi, мобильные данные и VPN.",e);
+            throw new IOException("Интернет доступен, но сервер обновлений не определяется. Проверьте DNS и VPN.",e);
+        }
+    }
+    private static String friendly(Exception e){
+        if(e instanceof UnknownHostException)return "Не удаётся определить адрес сервера обновлений. Проверьте интернет, DNS и VPN.";
+        if(e instanceof SocketTimeoutException)return "Сервер обновлений не ответил вовремя. Попробуйте ещё раз.";
+        if(e instanceof SSLException)return "Ошибка защищённого соединения. Проверьте дату, время и настройки VPN.";
+        if(e instanceof ConnectException)return "Не удалось подключиться к серверу обновлений.";
+        String s=e.getMessage();
+        return ErrorText.human(s);
+    }
+    private static void requireOk(HttpsURLConnection c,String purpose)throws IOException{
+        int code=c.getResponseCode();
+        if(code==200)return;
+        if(code==404)throw new IOException("Файл обновления не найден на сервере (HTTP 404).");
+        if(code==403||code==429)throw new IOException("Сервер временно ограничил загрузку (HTTP "+code+"). Попробуйте позже.");
+        if(code>=500)throw new IOException("Сервер обновлений временно недоступен (HTTP "+code+").");
+        throw new IOException(purpose+": сервер ответил HTTP "+code);
+    }
+    private static HttpsURLConnection connection(String url)throws IOException{
+        checkHttps(url);
+        URLConnection c=new URL(url).openConnection();
+        if(!(c instanceof HttpsURLConnection))throw new IOException("Не HTTPS");
+        HttpsURLConnection h=(HttpsURLConnection)c;
+        h.setConnectTimeout(12000);h.setReadTimeout(25000);
+        h.setRequestProperty("User-Agent","QR-LINK-Updater/1.0");
+        return h;
+    }
+    /** If an owner rename breaks the legacy APK URL, retry only the pinned same-version asset. */
+    private static HttpsURLConnection openApk(String url,String version)throws IOException{
+        IOException oldFailure;
+        try{
+            HttpsURLConnection original=connection(url);
+            try{requireOk(original,"Загрузка APK");return original;}
+            catch(IOException unavailable){original.disconnect();throw unavailable;}
+        }catch(IOException unavailable){oldFailure=unavailable;}
+        String fallback=OtaUrlPolicy.canonicalApkFallback(url,version);
+        if(fallback==null)throw oldFailure;
+        HttpsURLConnection canonical=connection(fallback);
+        try{requireOk(canonical,"Загрузка APK");return canonical;}
+        catch(IOException unavailable){
+            canonical.disconnect();unavailable.addSuppressed(oldFailure);throw unavailable;
+        }
+    }
+
+    /** The original URL remains primary for installed OTA clients. */
+    public static Release fetchLatest(Context context)throws Exception{
+        internetReady(context);
+        try{return readManifest(MANIFEST_URL);}
+        catch(IOException oldEndpointFailure){
+            // GitHub owner changes can invalidate old release redirects.
+            // Retry only the canonical URL of the same pinned repository.
+            try{return readManifest(OtaUrlPolicy.CANONICAL_MANIFEST);}
+            catch(Exception currentFailure){
+                currentFailure.addSuppressed(oldEndpointFailure);
+                throw currentFailure;
+            }
+        }
+    }
+    private static Release readManifest(String url)throws Exception{
+        HttpsURLConnection c=connection(url);
+        try{
+            requireOk(c,"Проверка обновления");
+            ByteArrayOutputStream memory=new ByteArrayOutputStream();
+            try(InputStream in=c.getInputStream()){
+                byte[] b=new byte[8192];int n;
+                while((n=in.read(b))!=-1){
+                    if(memory.size()+n>512*1024)throw new IOException("Ответ сервера слишком большой.");
+                    memory.write(b,0,n);
+                }
+            }
+            try{return new Release(new JSONObject(memory.toString("UTF-8")));}
+            catch(org.json.JSONException bad){throw new IOException("Некорректные данные обновления.",bad);}
         }finally{c.disconnect();}
     }
-    private static void ui(Activity a,Runnable callback){a.runOnUiThread(()->{if(!a.isFinishing()&&!a.isDestroyed())callback.run();});}
-    private static void error(Activity a,Exception e){ui(a,()->new AlertDialog.Builder(a).setTitle("Не удалось обновить").setMessage(
-        e.getMessage()==null?"Проверьте интернет и повторите попытку.":e.getMessage()).setPositiveButton("Закрыть",null).show());}
-    public static void check(Activity activity){
-        Toast.makeText(activity,"Проверка обновлений…",Toast.LENGTH_SHORT).show();
+    public static void check(Activity activity,String manifestUrl,Callback cb){
         new Thread(()->{
             try{
-                Release r=latest();
-                int current=currentVersion(activity);
-                ui(activity,()->{
-                    if(r.code<=current){new AlertDialog.Builder(activity).setTitle("PING TEST обновлён")
-                        .setMessage("Установлена актуальная версия.\nВерсия: "+BuildConfig.VERSION_NAME)
-                        .setPositiveButton("Готово",null).show();return;}
-                    new AlertDialog.Builder(activity).setTitle("Доступна версия "+r.version)
-                        .setMessage("Обновление PING TEST\n\n"+r.notes+"\n\nРазмер: "+(r.bytes/1024/1024)+" МБ")
-                        .setNegativeButton("Позже",null).setPositiveButton("Загрузить",(d,w)->download(activity,r)).show();
-                });
-            }catch(Exception e){error(activity,e);}
-        },"ping-ota-check").start();
-    }
-    private static int currentVersion(Context c)throws Exception{return c.getPackageManager().getPackageInfo(c.getPackageName(),0).versionCode;}
-    private static void download(Activity a,Release release){
-        LinearLayout panel=new LinearLayout(a);panel.setPadding(42,30,42,10);panel.setOrientation(LinearLayout.VERTICAL);
-        TextView label=new TextView(a);label.setText("Загрузка защищённого обновления…");panel.addView(label);
-        ProgressBar bar=new ProgressBar(a,null,android.R.attr.progressBarStyleHorizontal);bar.setMax(100);panel.addView(bar);
-        AlertDialog dlg=new AlertDialog.Builder(a).setTitle("PING TEST · OTA").setView(panel).setCancelable(false).create();dlg.show();
-        new Thread(()->{
-            File apk=apkFile(a), temp=new File(apk.getParentFile(),FILENAME+".part");
-            HttpURLConnection c=null;
-            try{
-                if(!apk.getParentFile().isDirectory()&&!apk.getParentFile().mkdirs())throw new IOException("Невозможно подготовить память");
-                if(apk.getParentFile().getUsableSpace()<release.bytes+5*1024*1024)throw new IOException("Недостаточно памяти");
-                c=open(release.url);long total=c.getContentLengthLong();
-                if(total>LIMIT || (total>0&&total!=release.bytes))throw new IOException("Размер APK не совпадает");
-                long received=0,shown=0;MessageDigest digest=MessageDigest.getInstance("SHA-256");
-                try(InputStream input=new BufferedInputStream(c.getInputStream());FileOutputStream output=new FileOutputStream(temp)){
-                    byte[] b=new byte[32768];int n;
-                    while((n=input.read(b))!=-1){received+=n;if(received>release.bytes)throw new IOException("APK превышает заявленный размер");
-                        output.write(b,0,n);digest.update(b,0,n);
-                        long completed=received;
-                        if(received-shown>release.bytes/100||received==release.bytes){shown=received;
-                            ui(a,()->{bar.setProgress((int)(100L*completed/release.bytes));label.setText("Загружено: "+(100L*completed/release.bytes)+"%");});}
-                    }
-                    output.getFD().sync();
-                }
-                if(received!=release.bytes)throw new IOException("Файл загружен не полностью");
-                if(!hex(digest.digest()).equalsIgnoreCase(release.sha))throw new IOException("SHA-256 APK не совпадает");
-                if(apk.exists()&&!apk.delete())throw new IOException("Невозможно заменить предыдущий файл");
-                if(!temp.renameTo(apk))throw new IOException("Не удалось сохранить APK");
-                verify(a,apk,release.code);
-                ui(a,()->{dlg.dismiss();new AlertDialog.Builder(a).setTitle("Подпись проверена")
-                    .setMessage("Обновление загружено и проверено. Android запросит подтверждение установки.")
-                    .setPositiveButton("Установить",(d,w)->install(a,apk,release.code)).setNegativeButton("Позже",null).show();});
-            }catch(Exception e){temp.delete();apk.delete();ui(a,dlg::dismiss);error(a,e);}
-            finally{if(c!=null)c.disconnect();}
-        },"ping-ota-download").start();
-    }
-    private static String hex(byte[] data){StringBuilder sb=new StringBuilder();for(byte b:data)sb.append(String.format(Locale.US,"%02x",b&255));return sb.toString();}
-    @SuppressWarnings("deprecation") private static Signature[] signatures(PackageInfo info){
-        if(Build.VERSION.SDK_INT>=28&&info.signingInfo!=null)return info.signingInfo.getApkContentsSigners();
-        return info.signatures;
-    }
-    private static void verify(Context c,File apk,int expected)throws Exception{
-        PackageManager pm=c.getPackageManager();
-        int flag=Build.VERSION.SDK_INT>=28?PackageManager.GET_SIGNING_CERTIFICATES:PackageManager.GET_SIGNATURES;
-        PackageInfo file=pm.getPackageArchiveInfo(apk.getAbsolutePath(),flag);
-        PackageInfo installed=pm.getPackageInfo(c.getPackageName(),flag);
-        if(file==null||!PACKAGE.equals(file.packageName)||file.versionCode!=expected||expected<=installed.versionCode)
-            throw new IOException("Неверный пакет или версия APK");
-        Signature[] s=signatures(file),current=signatures(installed);
-        if(s==null||current==null||s.length!=1||current.length!=1)throw new IOException("Непроверенная подпись");
-        String candidate=hex(MessageDigest.getInstance("SHA-256").digest(s[0].toByteArray()));
-        String existing=hex(MessageDigest.getInstance("SHA-256").digest(current[0].toByteArray()));
-        if(!CERT.equalsIgnoreCase(candidate)||!CERT.equalsIgnoreCase(existing)||!Arrays.equals(s[0].toByteArray(),current[0].toByteArray()))
-            throw new IOException("Подпись APK не соответствует официальной подписи PING TEST");
-    }
-    private static void install(Activity a,File apk,int code){
-        try{
-            verify(a,apk,code);
-            if(Build.VERSION.SDK_INT>=26&&!a.getPackageManager().canRequestPackageInstalls()){
-                a.startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,Uri.parse("package:"+a.getPackageName())));
-                Toast.makeText(a,"Разрешите установку APK и повторите обновление",Toast.LENGTH_LONG).show();return;
+                if(!MANIFEST_URL.equals(manifestUrl))throw new IOException("Недоверенный источник обновления.");
+                activity.runOnUiThread(()->cb.status("Проверка соединения..."));
+                Release info=fetchLatest(activity.getApplicationContext());
+                long installed=activity.getPackageManager().getPackageInfo(activity.getPackageName(),0).getLongVersionCode();
+                activity.runOnUiThread(()->cb.release(info,info.versionCode>installed));
+            }catch(Exception e){
+                String error=friendly(e);
+                activity.runOnUiThread(()->cb.error(error));
             }
-            Uri uri=Uri.parse("content://"+a.getPackageName()+".ota/apk");
-            Intent intent=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,"application/vnd.android.package-archive");
-            intent.setClipData(ClipData.newRawUri("PING TEST OTA",uri));
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK|Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            a.getApplicationContext().startActivity(intent);
-        }catch(Exception e){error(a,e);}
+        },"ping-test-update-check").start();
+    }
+    public static void download(Activity activity,Release r,Callback cb){
+        new Thread(()->{
+            File folder=new File(activity.getFilesDir(),"ota");
+            File temp=new File(folder,APK_FILE+".part");
+            File apk=new File(folder,APK_FILE);
+            try{
+                internetReady(activity);
+                if(!folder.isDirectory()&&!folder.mkdirs())throw new IOException("Не удалось создать папку обновлений во внутренней памяти.");
+                if(r.sizeBytes>MAX_APK)throw new IOException("Размер обновления превышает 512 МБ.");
+                if(r.sizeBytes>0&&folder.getUsableSpace()<r.sizeBytes+4L*1024*1024)
+                    throw new IOException("Недостаточно свободного места для обновления. Освободите память устройства.");
+                HttpsURLConnection c=openApk(r.apkUrl,r.versionName);
+                long received=0L;
+                long total;
+                MessageDigest digest=MessageDigest.getInstance("SHA-256");
+                try{
+                    long serverLength=c.getContentLengthLong();
+                    if(serverLength>MAX_APK)throw new IOException("Слишком большой APK.");
+                    if(r.sizeBytes>0&&serverLength>0&&serverLength!=r.sizeBytes)
+                        throw new IOException("Сервер вернул файл другого размера.");
+                    total=r.sizeBytes>0?r.sizeBytes:serverLength;
+                    final long visibleTotal=total;
+                    activity.runOnUiThread(()->cb.progress(0L,visibleTotal));
+                    try(InputStream in=new BufferedInputStream(c.getInputStream(),128*1024);
+                        FileOutputStream out=new FileOutputStream(temp,false)){
+                        byte[] buf=new byte[128*1024];
+                        int n;long lastReport=0L;
+                        while((n=in.read(buf))!=-1){
+                            received+=n;
+                            if(received>MAX_APK)throw new IOException("Превышен допустимый размер обновления.");
+                            out.write(buf,0,n);digest.update(buf,0,n);
+                            long now=System.currentTimeMillis();
+                            if(now-lastReport>120L){
+                                lastReport=now;
+                                final long current=received;
+                                activity.runOnUiThread(()->cb.progress(current,visibleTotal));
+                            }
+                        }
+                        out.getFD().sync();
+                    }catch(FileNotFoundException e){
+                        throw new IOException("Не удалось создать файл обновления. Проверьте свободное место.",e);
+                    }
+                }finally{c.disconnect();}
+                if(r.sizeBytes>0&&received!=r.sizeBytes)
+                    throw new IOException("Файл загрузился не полностью. Повторите загрузку.");
+                final long complete=received;
+                final long full=r.sizeBytes>0?r.sizeBytes:received;
+                activity.runOnUiThread(()->{
+                    cb.progress(complete,full);
+                    cb.status("Проверяем целостность и подпись…");
+                });
+                StringBuilder hash=new StringBuilder(64);
+                for(byte b:digest.digest())hash.append(String.format(Locale.US,"%02x",b&255));
+                if(!hash.toString().equals(r.sha256))throw new IOException("Контрольная сумма SHA-256 не совпала. Файл отклонён.");
+                try{Files.move(temp.toPath(),apk.toPath(),StandardCopyOption.REPLACE_EXISTING);}
+                catch(IOException move){throw new IOException("Не удалось сохранить APK во внутренней памяти. Проверьте свободное место.",move);}
+                try{verifyApk(activity,apk,r.versionCode);}
+                catch(Exception invalid){apk.delete();throw invalid;}
+                activity.runOnUiThread(()->cb.downloaded(apk));
+            }catch(Exception e){
+                temp.delete();
+                final String error=friendly(e);
+                activity.runOnUiThread(()->cb.error(error));
+            }
+        },"ping-test-update-download").start();
+    }
+    /** An archive is accepted only if Android will recognize it as THIS installed app. */
+    public static void verifyApk(Context c,File file,long expectedCode)throws Exception{
+        PackageManager pm=c.getPackageManager();
+        PackageInfo archive=pm.getPackageArchiveInfo(file.getAbsolutePath(),PackageManager.GET_SIGNING_CERTIFICATES);
+        if(archive==null)throw new IOException("Не удалось прочитать пакет APK");
+        if(!c.getPackageName().equals(archive.packageName))throw new IOException("APK принадлежит другому приложению");
+        if(archive.getLongVersionCode()!=expectedCode)throw new IOException("Версия APK не соответствует манифесту");
+        long current=pm.getPackageInfo(c.getPackageName(),0).getLongVersionCode();
+        if(archive.getLongVersionCode()<=current)throw new IOException("Версия уже установлена или устарела");
+        PackageInfo installed=pm.getPackageInfo(c.getPackageName(),PackageManager.GET_SIGNING_CERTIFICATES);
+        if(installed.signingInfo==null||archive.signingInfo==null)throw new IOException("Не удалось проверить подпись APK");
+        Signature[] oldSigners=installed.signingInfo.getApkContentsSigners();
+        Signature[] newSigners=archive.signingInfo.getApkContentsSigners();
+        if(oldSigners==null||newSigners==null||oldSigners.length!=1||newSigners.length!=1)
+            throw new IOException("Неподдерживаемое количество сертификатов подписи");
+        if(!TRUSTED_CERT_SHA256.equals(sha256OfSignature(oldSigners[0]))
+            || !TRUSTED_CERT_SHA256.equals(sha256OfSignature(newSigners[0])))
+            throw new IOException("Неверная подпись APK. Установите официальную версию PING TEST");
+        if(!Arrays.equals(oldSigners,newSigners))
+            throw new IOException("Подписи установленного приложения и обновления различаются");
+    }
+    private static String sha256OfSignature(Signature signer)throws Exception{
+        byte[] digest=MessageDigest.getInstance("SHA-256").digest(signer.toByteArray());
+        StringBuilder hex=new StringBuilder(64);
+        for(byte b:digest)hex.append(String.format(Locale.US,"%02X",b&255));
+        return hex.toString();
+    }
+    public static void install(Activity a){
+        try{
+            File apk=apkFile(a);
+            if(!apk.isFile())throw new IOException("Сначала загрузите обновление");
+            PackageManager pm=a.getPackageManager();
+            if(Build.VERSION.SDK_INT>=26&&!pm.canRequestPackageInstalls()){
+                Intent settings=new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:"+a.getPackageName()));
+                android.widget.Toast.makeText(a,"Разрешите установку обновлений и вернитесь в PING TEST",android.widget.Toast.LENGTH_LONG).show();
+                a.startActivity(settings);
+                return;
+            }
+            // Both APK identity and signing certificate are checked again before installation.
+            PackageInfo archive=pm.getPackageArchiveInfo(apk.getAbsolutePath(),0);
+            if(archive==null)throw new IOException("Не удалось открыть APK");
+            verifyApk(a,apk,archive.getLongVersionCode());
+            Uri content=Uri.parse("content://"+a.getPackageName()+".updates/apk");
+            // A self-update kills the old PING TEST process. Launching the
+            // system installer as a child of our Activity can leave its
+            // post-install "Open" action attached to the dying task.
+            // Start the installer from the application context with NEW_TASK
+            // so Android keeps the installer and PING TEST in separate tasks.
+            Intent view=new Intent(Intent.ACTION_VIEW);
+            view.setDataAndType(content,"application/vnd.android.package-archive");
+            view.setClipData(ClipData.newRawUri("PING TEST",content));
+            view.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                | Intent.FLAG_ACTIVITY_NEW_TASK);
+            a.getApplicationContext().startActivity(view);
+        }catch(Exception e){
+            OtaProgressDialog screen=new OtaProgressDialog(a);
+            screen.show();screen.fail(friendly(e),null);
+        }
     }
 }
