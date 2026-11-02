@@ -28,7 +28,7 @@ import java.net.*;
 import java.text.*;
 import java.util.*;
 
-/** PING TEST 1.5.0 • QR LINK design language • Android framework only. */
+/** PING TEST 1.5.2 • QR LINK design language • Android framework only. */
 public final class MainActivity extends Activity {
     private int tab=0;
     private final Handler handler=new Handler(Looper.getMainLooper());
@@ -103,6 +103,10 @@ public final class MainActivity extends Activity {
     @Override public void onBackPressed(){if(tab==0)super.onBackPressed();else showTab(0);}
 
     private void showTab(int next){
+        Ui.applyPalette(this);
+        getWindow().setStatusBarColor(Ui.bg(this));getWindow().setNavigationBarColor(Ui.bg(this));
+        getWindow().getDecorView().setSystemUiVisibility(AppPrefs.light(this)?
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
         if(replyColorAnimator!=null){replyColorAnimator.cancel();replyColorAnimator=null;}
         tab=next;host=null;go=null;last=null;avg=null;failed=null;graph=null;qualityState=null;
         root=Ui.vertical(this);root.setBackgroundColor(Ui.bg(this));
@@ -594,37 +598,28 @@ public final class MainActivity extends Activity {
             .setPositiveButton("Поделиться",(d,w)->share(out)).setNegativeButton("Закрыть",null).show();
     }
     private String date(long time){return new SimpleDateFormat("dd.MM.yyyy  HH:mm:ss",Locale.getDefault()).format(new Date(time));}
-    // SETTINGS
-    private void settingsPage(){page.addView(Ui.text(this,"Настройки",23,Ui.fg(),true),Ui.margins(-1,-2,0,15));
+    // QR LINK SETTINGS · genuine section architecture and animation timings
+    private void settingsPage(){
+        LinearLayout intro=Ui.vertical(this);intro.setPadding(Ui.dp(7),Ui.dp(2),Ui.dp(7),Ui.dp(14));
+        intro.addView(Ui.text(this,"Персонализация",23,Ui.fg(),true));
+        addSpace(intro,7);
+        intro.addView(Ui.text(this,"Настройте приложение под себя. Все разделы изначально свёрнуты.",13,Ui.muted(),false));
+        page.addView(intro,Ui.margins(-1,-2,0,6));
+        group("ВНЕШНИЙ ВИД","Тема экрана и акцентная палитра",this::appearanceSettings);
         group("ИЗМЕРЕНИЯ","Интервал, тайм-ауты и размер пакета",this::networkSettings);
         group("УВЕДОМЛЕНИЯ","Прогресс и график",this::notificationSettings);
-        group("ИСТОРИЯ","Сохранение и буфер обмена",this::generalSettings);
-        group("ВНЕШНИЙ ВИД","Темы, анимация и акцент",this::appearanceSettings);
-        group("ОБНОВЛЕНИЯ","Официальный OTA-канал GitHub",this::otaSettings);
-        group("О ПРИЛОЖЕНИИ","Версия, возможности и ограничения",this::about);
+        group("ИСТОРИЯ","Сохранение результатов",this::generalSettings);
+        group("ОБНОВЛЕНИЯ","Проверка при запуске и в фоне",this::otaSettings);
+        group("О ПРИЛОЖЕНИИ","Версия, назначение и безопасность",this::about);
     }
     private interface Section{void fill(LinearLayout parent);}
     private void group(String title,String subtitle,Section factory){
-        LinearLayout card=Ui.panel(this);card.setPadding(Ui.dp(14),Ui.dp(12),Ui.dp(14),Ui.dp(12));
-        LinearLayout top=Ui.horizontal(this);LinearLayout txt=Ui.vertical(this);
-        int glyph=title.equals("ИЗМЕРЕНИЯ")?R.drawable.ic_wifi:
-            title.equals("УВЕДОМЛЕНИЯ")?R.drawable.ic_shield:
-            title.equals("ИСТОРИЯ")?R.drawable.ic_history:
-            title.equals("ВНЕШНИЙ ВИД")?R.drawable.ic_settings:R.drawable.ic_server;
-        top.addView(icon(glyph,AppPrefs.accent(this),Ui.dp(23)),Ui.margins(25,25,0,0));
-        txt.setPadding(Ui.dp(11),0,0,0);
-        txt.addView(Ui.text(this,title,14,Ui.fg(),true));txt.addView(Ui.text(this,subtitle,11,Ui.muted(),false));
-        top.addView(txt,new LinearLayout.LayoutParams(0,-2,1));TextView arrow=Ui.text(this,"⌄",20,AppPrefs.accent(this),true);top.addView(arrow);
-        card.addView(top);LinearLayout extra=Ui.vertical(this);
-        boolean expanded=openSections.contains(title);
-        if(expanded){addSpace(extra,14);factory.fill(extra);extra.setVisibility(View.VISIBLE);arrow.setText("⌃");}
-        else extra.setVisibility(View.GONE);
-        card.addView(extra);
-        top.setOnClickListener(v->{boolean open=extra.getVisibility()==View.GONE;
-            if(open&&extra.getChildCount()==0){addSpace(extra,14);factory.fill(extra);}
-            extra.setVisibility(open?View.VISIBLE:View.GONE);arrow.setText(open?"⌃":"⌄");
-            if(open)openSections.add(title);else openSections.remove(title);
-        });page.addView(card,Ui.margins(-1,-2,0,9));
+        String glyph=title.equals("ИЗМЕРЕНИЯ")?"speed":
+            title.equals("УВЕДОМЛЕНИЯ")?"history":
+            title.equals("ИСТОРИЯ")?"folder":
+            title.equals("ВНЕШНИЙ ВИД")?"theme":
+            title.equals("ОБНОВЛЕНИЯ")?"receive":"info";
+        QrSettingsCards.section(this,page,openSections,title,title,subtitle,glyph,factory::fill);
     }
     private void networkSettings(LinearLayout root){
         selectRow(root,"Запросов","count",new int[]{0,10,30,100,500},new String[]{"∞","10","30","100","500"});
@@ -653,35 +648,19 @@ public final class MainActivity extends Activity {
            .setPositiveButton("Удалить",(d,w)->{HistoryStore.clear(this);toast("История очищена");}).setNegativeButton("Отмена",null).show());
     }
     private void appearanceSettings(LinearLayout p){
-        toggleRow(p,"AMOLED","Абсолютно чёрный фон","amoled",true);
-        toggleRow(p,"Плавное движение","Анимация значений, графика и нажатий","motion",true);
-        p.addView(label("ЦВЕТ АКЦЕНТА"),Ui.margins(-1,-2,0,8));
-        int[] colors={0xff55dfcb,0xff43baf5,0xff658aff,0xffac8dff,0xffdb91ff,0xffff77ce,
-            0xffff7085,0xffff936d,0xffffba63,0xffffd45a,0xffd0e46d,0xff90df79,
-            0xff57cda3,0xff4ad5de,0xff35a6de,0xff8773e4,0xffba6ef6,0xffed77a3,
-            0xffe75f5f,0xffd39c78,0xffa3bbc8,0xffe8edf5,0xff76a4ab,0xff9a86ab};
-        String[] names={"Мята","Лазурь","Сапфир","Лаванда","Сирень","Фуксия","Коралл","Персик","Янтарь","Лимон","Лайм","Весна","Изумруд","Бирюза","Океан","Ирис","Аметист","Пион","Рубин","Бронза","Сталь","Лёд","Шалфей","Слива"};
-        for(int r=0;r<6;r++){LinearLayout line=Ui.horizontal(this);
-            for(int c=0;c<4;c++){int i=r*4+c,color=colors[i];boolean chosen=AppPrefs.accent(this)==color;
-                LinearLayout col=Ui.vertical(this);col.setGravity(Gravity.CENTER);col.setPadding(Ui.dp(2),Ui.dp(8),Ui.dp(2),Ui.dp(8));
-                TextView dot=Ui.text(this,chosen?"◉":"●",22,color,true);dot.setGravity(Gravity.CENTER);col.addView(dot);
-                TextView name=Ui.text(this,names[i],9,chosen?Ui.fg():Ui.muted(),chosen);name.setGravity(Gravity.CENTER);col.addView(name);
-                if(chosen)col.setBackground(Ui.shape(Ui.surface2(this),Ui.dp(11),color));
-                line.addView(col,new LinearLayout.LayoutParams(0,-2,1));col.setOnClickListener(v->{AppPrefs.put(this,"accent",color);redrawSettings();});
-            }p.addView(line,Ui.margins(-1,-2,0,3));}
+        QrSettingsCards.appearance(this,p,this::redrawSettings);
     }
     private void otaSettings(LinearLayout p){
-        p.addView(Ui.text(this,"PING TEST проверяет обновления только в официальном репозитории INFEND/PING-TEST.",12,Ui.muted(),false));
-        TextView check=Ui.button(this,"ПРОВЕРИТЬ ОБНОВЛЕНИЯ",true);p.addView(check,Ui.margins(-1,-2,0,10));
-        check.setOnClickListener(v->UpdateManager.check(this));
-        OtaOptions.attach(this,p,this::redrawSettings);
+        QrSettingsCards.updates(this,p,()->UpdateManager.check(this));
     }
     private void about(LinearLayout p){
-        p.addView(Ui.text(this,"PING TEST · 1.5.1",17,Ui.fg(),true));
-        p.addView(Ui.text(this,"Java 17 · Code on the Go · Android "+Build.VERSION.RELEASE,12,Ui.muted(),false));
-        p.addView(Ui.text(this,"Проверка измеряет ответы выбранного узла. При активном VPN результаты относятся к маршруту через VPN. Некоторые сайты и серверы не отвечают на ping: отсутствие ICMP-ответа не означает, что игра или сайт недоступны.",12,Ui.muted(),false),Ui.margins(-1,-2,9,0));
+        QrSettingsCards.about(this,p);
     }
     private void redrawSettings(){int scroll=scroller==null?0:scroller.getScrollY();
+        Ui.applyPalette(this);
+        getWindow().setStatusBarColor(Ui.bg(this));getWindow().setNavigationBarColor(Ui.bg(this));
+        getWindow().getDecorView().setSystemUiVisibility(AppPrefs.light(this)?
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
         noEntrance=true;try{showTab(2);}finally{noEntrance=false;}
         if(scroller!=null)scroller.post(()->scroller.scrollTo(0,scroll));
     }
