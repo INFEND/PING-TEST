@@ -4,27 +4,43 @@ import base64, json, os, pathlib, subprocess, tempfile
 
 bundle=os.environ.get('PING_TEST_SIGNING_BUNDLE','').strip()
 if not bundle:
-    raise SystemExit('::error::Missing Actions secret PING_TEST_SIGNING_BUNDLE')
-# Support direct Base64 text, copied quoted Base64, KEY=... lines,
-# wrapped Base64, or the decoded JSON. Never log key contents.
-import re
-if bundle.startswith('PING_TEST_SIGNING_BUNDLE='):
-    bundle=bundle.split('=',1)[1].strip()
-bundle=bundle.lstrip(chr(65279)).strip().strip('"').strip("'")
-try:
-    if bundle.startswith('{'):
-        config=json.loads(bundle)
+    raise SystemExit('::error::Signing secret is missing')
+import io
+import zipfile
+
+def read_bundle(value):
+    value=value.lstrip(chr(65279)).strip()
+    if value.startswith('PING_TEST_SIGNING_BUNDLE='):
+        value=value.split('=',1)[1].strip()
+    value=value.strip().strip('"').strip("'")
+    if value.startswith('{'):
+        obj=json.loads(value)
+        raw=None
     else:
-        compact=''.join(bundle.split())
-        config=json.loads(base64.b64decode(compact,validate=True).decode('utf-8'))
-    key=base64.b64decode(config['keystoreBase64'],validate=True)
-    required=('storePassword','keyPassword','keyAlias','certSha256')
-    if any(not config.get(name) for name in required) or len(key)<500:
-        raise ValueError('Incomplete bundle')
-except (ValueError,KeyError,UnicodeError,TypeError) as error:
-    raise SystemExit('::error::Signing secret is not a complete Base64 JSON bundle. Copy the entire single-line value from PING_TEST_SIGNING_BUNDLE_PRIVATE.txt. No leading or trailing explanation.')
+        raw=base64.b64decode(''.join(value.split()),validate=True)
+        if raw[:2]==b'PK':
+            with zipfile.ZipFile(io.BytesIO(raw)) as archive:
+                meta=json.loads(archive.read('signing.json'))
+                candidates=[name for name in archive.namelist() if name.endswith('.p12') or name.endswith('.pfx')]
+                if len(candidates)!=1: raise ValueError('Ambiguous PKCS12 file')
+                private=archive.read(candidates[0])
+            obj={'keystoreBase64':base64.b64encode(private).decode('ascii'),
+                 'storePassword':meta['keystore_password'],
+                 'keyPassword':meta['key_password'],
+                 'keyAlias':meta['alias'],
+                 'certSha256':meta['certificate_sha256']}
+        else:
+            obj=json.loads(raw.decode('utf-8'))
+    private=base64.b64decode(''.join(obj['keystoreBase64'].split()),validate=True)
+    needed=('storePassword','keyPassword','keyAlias','certSha256')
+    if len(private)<500 or not all(obj.get(n) for n in needed):
+        raise ValueError('Missing keystore or metadata')
+    return obj,private
+
+try:
+    config,key=read_bundle(bundle)
 except Exception:
-    raise SystemExit('::error::Signing secret could not be decoded. Verify PING_TEST_SIGNING_BUNDLE in repository Actions Secrets.')
+    raise SystemExit('::error::Signing secret format is not recognized as a PING TEST Base64 JSON or QR LINK ZIP bundle')
 root=pathlib.Path(os.environ['ANDROID_SDK_ROOT'])/'build-tools'/'35.0.0'
 if not root.exists():root=pathlib.Path(os.environ['ANDROID_SDK_ROOT'])/'build-tools'/'36.0.0'
 unsigned=pathlib.Path('app/build/outputs/apk/release/app-release-unsigned.apk')
