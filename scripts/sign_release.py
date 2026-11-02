@@ -2,15 +2,29 @@
 """Sign an unsigned Android release using one private GitHub Actions secret."""
 import base64, json, os, pathlib, subprocess, tempfile
 
-bundle=os.environ.get('PING_TEST_SIGNING_BUNDLE','')
+bundle=os.environ.get('PING_TEST_SIGNING_BUNDLE','').strip()
 if not bundle:
     raise SystemExit('::error::Missing Actions secret PING_TEST_SIGNING_BUNDLE')
+# Support direct Base64 text, copied quoted Base64, KEY=... lines,
+# wrapped Base64, or the decoded JSON. Never log key contents.
+import re
+if bundle.startswith('PING_TEST_SIGNING_BUNDLE='):
+    bundle=bundle.split('=',1)[1].strip()
+bundle=bundle.strip('\\ufeff').strip().strip('"').strip("'")
 try:
-    config=json.loads(base64.b64decode(bundle,validate=True))
+    if bundle.startswith('{'):
+        config=json.loads(bundle)
+    else:
+        compact=re.sub(r'\\s+','',bundle)
+        config=json.loads(base64.b64decode(compact,validate=True).decode('utf-8'))
     key=base64.b64decode(config['keystoreBase64'],validate=True)
-except Exception as error:
-    raise SystemExit('::error::Invalid signing bundle: '+str(type(error).__name__))
-assert len(key)>500, 'Invalid keystore'
+    required=('storePassword','keyPassword','keyAlias','certSha256')
+    if any(not config.get(name) for name in required) or len(key)<500:
+        raise ValueError('Incomplete bundle')
+except (ValueError,KeyError,UnicodeError,TypeError) as error:
+    raise SystemExit('::error::Signing secret is not a complete Base64 JSON bundle. Copy the entire single-line value from PING_TEST_SIGNING_BUNDLE_PRIVATE.txt. No leading or trailing explanation.')
+except Exception:
+    raise SystemExit('::error::Signing secret could not be decoded. Verify PING_TEST_SIGNING_BUNDLE in repository Actions Secrets.')
 root=pathlib.Path(os.environ['ANDROID_SDK_ROOT'])/'build-tools'/'35.0.0'
 if not root.exists():root=pathlib.Path(os.environ['ANDROID_SDK_ROOT'])/'build-tools'/'36.0.0'
 unsigned=pathlib.Path('app/build/outputs/apk/release/app-release-unsigned.apk')
