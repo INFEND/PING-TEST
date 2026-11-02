@@ -10,12 +10,12 @@ if not bundle:
 import re
 if bundle.startswith('PING_TEST_SIGNING_BUNDLE='):
     bundle=bundle.split('=',1)[1].strip()
-bundle=bundle.strip('\\ufeff').strip().strip('"').strip("'")
+bundle=bundle.lstrip(chr(65279)).strip().strip('"').strip("'")
 try:
     if bundle.startswith('{'):
         config=json.loads(bundle)
     else:
-        compact=re.sub(r'\\s+','',bundle)
+        compact=''.join(bundle.split())
         config=json.loads(base64.b64decode(compact,validate=True).decode('utf-8'))
     key=base64.b64decode(config['keystoreBase64'],validate=True)
     required=('storePassword','keyPassword','keyAlias','certSha256')
