@@ -15,7 +15,7 @@ match=re.search(r"^package: name='([^']+)' versionCode='([0-9]+)' versionName='(
 if not match:sys.exit("Unable to read APK metadata")
 package, code_str, version=match.groups()
 code=int(code_str)
-if package!="com.xarkon.pingtest" or not re.fullmatch(r"[0-9]+\\.[0-9]+\\.[0-9]+",version):
+if package!="com.xarkon.pingtest" or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+",version):
     sys.exit("Invalid APK identity or version")
 index=json.loads(pathlib.Path("release_notes/versions.json").read_text(encoding="utf-8"))
 if index.get(version)!=code:sys.exit("Version code must be indexed in release_notes/versions.json")
@@ -32,7 +32,7 @@ for name,version_code in sorted(index.items(),key=lambda pair:pair[1]):
         elif line.startswith("• "):
             visible.append("[+] "+line[2:])
     if not visible:sys.exit("No visible changes for "+name)
-    notes="\\n".join(visible)
+    notes="\n".join(visible)
     history.append({"versionCode":version_code,"versionName":name,"notes":notes})
 if not history or history[-1]["versionCode"]!=code:
     sys.exit("Cumulative history does not reach current version")
@@ -45,7 +45,7 @@ data={"schema":1,"packageName":package,"versionCode":code,"versionName":version,
       "sizeBytes":apk.stat().st_size,"publishedAt":datetime.now(timezone.utc).isoformat(timespec="seconds"),
       "notes":notes,"history":history}
 out=pathlib.Path("dist/update.json")
-out.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\\n",encoding="utf-8")
+out.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
 with open(os.environ["GITHUB_OUTPUT"],"a",encoding="utf-8") as f:
-    f.write(f"tag=v{version}\\nversion={version}\\nversion_code={code}\\n")
+    f.write(f"tag=v{version}\nversion={version}\nversion_code={code}\n")
 print("Signed OTA metadata prepared for",package,version,"history versions:",len(history))
