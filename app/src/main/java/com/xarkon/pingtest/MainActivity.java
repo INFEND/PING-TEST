@@ -50,16 +50,17 @@ public final class MainActivity extends Activity {
     private boolean vpnConsent=false,vpnDialogVisible=false;
     private long lastVpnUiCheck=0;
     private ScrollView scroller;
-    private TextView status,go,ip,info,logText,sendText,bestText,maxText,jitterText,unit,qualityState;
+    private TextView status,go,ip,info,bestText,maxText,jitterText,unit,qualityState;
+    private ReplyMetric sendText;
+    private LinearLayout recentEvents,journalRows;
     private Metric last,avg,failed;
     private GraphView graph;
     private boolean noEntrance=false;
     private final HashSet<String> openSections=new HashSet<>();
-    private ValueAnimator replyColorAnimator;
     private Dialog journalDialog;
-    private TextView journalBody;
     private ScrollView journalScroll;
-    private String journalLast="";
+    private PingService.ProbeEvent journalTail;
+    private long journalSessionId=-1;
     private final Runnable journalTick=new Runnable(){@Override public void run(){
         if(journalDialog==null||!journalDialog.isShowing())return;
         refreshJournal();handler.postDelayed(this,140);
@@ -107,8 +108,7 @@ public final class MainActivity extends Activity {
         getWindow().setStatusBarColor(Ui.bg(this));getWindow().setNavigationBarColor(Ui.bg(this));
         getWindow().getDecorView().setSystemUiVisibility(AppPrefs.light(this)?
             View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
-        if(replyColorAnimator!=null){replyColorAnimator.cancel();replyColorAnimator=null;}
-        tab=next;host=null;go=null;last=null;avg=null;failed=null;graph=null;qualityState=null;
+        tab=next;host=null;go=null;last=null;avg=null;failed=null;graph=null;qualityState=null;recentEvents=null;
         root=Ui.vertical(this);root.setBackgroundColor(Ui.bg(this));
         root.setOnApplyWindowInsetsListener((v,insets)->{
             int top,bottom;if(Build.VERSION.SDK_INT>=30){android.graphics.Insets st=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());top=st.top;bottom=st.bottom;}
@@ -202,7 +202,7 @@ public final class MainActivity extends Activity {
         LinearLayout metrics=Ui.horizontal(this);
         avg=new Metric("—",20,QualityColors.UNKNOWN,0);miniMetric(metrics,"СРЕДНИЙ",avg,0);
         failed=new Metric("—",20,QualityColors.UNKNOWN,1);miniMetric(metrics,"ПОТЕРИ",failed,1);
-        sendText=Ui.text(this,"0 / 0",20,Ui.fg(),true);sendText.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
+        sendText=new ReplyMetric();
         miniMetric(metrics,"ОТВЕТЫ / ВСЕГО",sendText,2);
         display.addView(metrics);
         addSpace(display,11);
@@ -214,7 +214,7 @@ public final class MainActivity extends Activity {
         page.addView(display,Ui.margins(-1,-2,0,11));
         LinearLayout chartCard=Ui.panel(this);chartCard.setPadding(Ui.dp(13),Ui.dp(11),Ui.dp(13),Ui.dp(11));
         LinearLayout graphHead=Ui.horizontal(this);graphHead.addView(label("ГРАФИК ЗАДЕРЖКИ"),new LinearLayout.LayoutParams(0,-2,1));
-        graphHead.addView(Ui.text(this,"120 ОТСЧЁТОВ",10,Ui.muted(),false));chartCard.addView(graphHead);
+        graphHead.addView(Ui.text(this,AppPrefs.number(this,"graph_points",150)+" ПАКЕТОВ",10,Ui.muted(),false));chartCard.addView(graphHead);
         TextView legend=Ui.text(this,"● Отлично       ● Норма       ● Плохо",10,Ui.muted(),false);
         SpannableStringBuilder legendSpan=new SpannableStringBuilder(legend.getText());
         legendSpan.setSpan(new ForegroundColorSpan(QualityColors.GREEN),0,1,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -228,17 +228,27 @@ public final class MainActivity extends Activity {
         LinearLayout events=Ui.panel(this);events.setPadding(Ui.dp(14),Ui.dp(12),Ui.dp(14),Ui.dp(12));
         LinearLayout titleRow=Ui.horizontal(this);titleRow.addView(label("СОБЫТИЯ"),new LinearLayout.LayoutParams(0,-2,1));
         TextView all=Ui.chip(this,"Журнал  ↗",false);all.setTextSize(11);titleRow.addView(all);all.setOnClickListener(v->fullLogDialog());
-        events.addView(titleRow);logText=Ui.mono(this,"Готов к запуску",12,Ui.muted());
-        logText.setLineSpacing(Ui.dp(3),1f);logText.setPadding(Ui.dp(3),Ui.dp(11),Ui.dp(3),Ui.dp(3));
-        events.addView(logText);page.addView(events);
+        events.addView(titleRow);
+        events.addView(eventHeader(),Ui.margins(-1,-2,0,5));
+        recentEvents=Ui.vertical(this);
+        events.addView(recentEvents);
+        page.addView(events);
         info=Ui.text(this,"",11,Ui.muted(),false);info.setPadding(Ui.dp(2),Ui.dp(9),Ui.dp(2),Ui.dp(1));
         page.addView(info);
         renderedVersion=-1;activeBefore=false;refreshPing();
     }
     private void miniMetric(LinearLayout parent,String name,TextView value,int index){
-        LinearLayout col=Ui.vertical(this);col.setPadding(index==0?0:Ui.dp(9),0,0,0);
-        col.addView(label(name));col.addView(value,Ui.margins(-1,29,0,0));
-        parent.addView(col,new LinearLayout.LayoutParams(0,-2,index==2?1.35f:1f));
+        LinearLayout col=Ui.vertical(this);
+        int gravity=index==0?Gravity.START:index==1?Gravity.CENTER_HORIZONTAL:Gravity.END;
+        col.setGravity(gravity);
+        TextView caption=label(name);caption.setSingleLine(true);caption.setGravity(
+            index==0?Gravity.START:index==1?Gravity.CENTER:Gravity.END);
+        col.addView(caption,new LinearLayout.LayoutParams(-1,-2));
+        value.setGravity(index==0?Gravity.START:index==1?Gravity.CENTER:Gravity.END);
+        value.setFontFeatureSettings("tnum");
+        value.setSingleLine(true);
+        col.addView(value,Ui.margins(-1,29,0,0));
+        parent.addView(col,new LinearLayout.LayoutParams(0,-2,1));
     }
     private void refreshPing(){if(tab!=0||go==null)return;
         PingService.Snapshot s=PingService.snapshot();refreshStatus(s);
@@ -246,11 +256,12 @@ public final class MainActivity extends Activity {
             ip.setText(VpnGuard.active(this)?"● VPN активен  ·  результат через VPN":"● Без VPN  ·  прямое измерение");
             last.update(-1,false,false);avg.update(-1,false,false);failed.update(-1,false,false);
             if(qualityState!=null){qualityState.setText("ОЖИДАНИЕ");qualityState.setTextColor(QualityColors.UNKNOWN);}
-            sendText.setText("0 / 0");sendText.setTextColor(QualityColors.UNKNOWN);bestText.setText("MIN  —");maxText.setText("MAX  —");jitterText.setText("JITTER  —");
+            sendText.update(0,0,false);bestText.setText("MIN  —");maxText.setText("MAX  —");jitterText.setText("JITTER  —");
             bestText.setTextColor(QualityColors.UNKNOWN);maxText.setTextColor(QualityColors.UNKNOWN);
             jitterText.setTextColor(QualityColors.UNKNOWN);
             graph.setData(new ArrayList<Float>(),AppPrefs.accent(this),Ui.surface(this));
-            logText.setText(coloredLog("Выбран другой узел. Начните проверку."));
+            if(recentEvents!=null){recentEvents.removeAllViews();
+                recentEvents.addView(Ui.text(this,"Выбран другой узел. Начните проверку.",12,Ui.muted(),false));}
             info.setText("");renderedVersion=-1;seenSession=-1;
             return;
         }
@@ -273,23 +284,7 @@ public final class MainActivity extends Activity {
                 ms<=45?"ОТЛИЧНО":ms<=110?"СТАБИЛЬНО":ms<=240?"ПОВЫШЕННАЯ":"ВЫСОКАЯ");
             qualityState.setTextColor(ms<0?(s.sent>0?QualityColors.RED:QualityColors.UNKNOWN):QualityColors.rtt(ms));
         }
-        String next=s.ok+" / "+s.sent;
-        if(!next.contentEquals(sendText.getText())){
-            if(sameSession&&AppPrefs.bool(this,"motion",true)){
-                sendText.animate().cancel();sendText.setTranslationY(Ui.dp(3));sendText.setAlpha(.6f);
-                sendText.animate().translationY(0).alpha(1).setDuration(130).start();
-            }
-            int targetColor=unusable?QualityColors.UNKNOWN:QualityColors.success(s.ok,s.sent);
-            int currentColor=sendText.getCurrentTextColor();
-            if(replyColorAnimator!=null)replyColorAnimator.cancel();
-            if(sameSession&&AppPrefs.bool(this,"motion",true)){
-                replyColorAnimator=ValueAnimator.ofArgb(currentColor,targetColor);
-                replyColorAnimator.setDuration(185);
-                replyColorAnimator.addUpdateListener(a->sendText.setTextColor((Integer)a.getAnimatedValue()));
-                replyColorAnimator.start();
-            }else sendText.setTextColor(targetColor);
-            sendText.setText(next);
-        }
+        sendText.update(s.ok,s.sent,sameSession);
         bestText.setText("MIN  "+(s.ok==0?"—":fmt(s.min)));
         bestText.setTextColor(s.ok==0?QualityColors.UNKNOWN:QualityColors.rtt(s.min));
         maxText.setText("MAX  "+(s.ok==0?"—":fmt(s.max)));
@@ -297,9 +292,7 @@ public final class MainActivity extends Activity {
         jitterText.setText("JITTER  "+(s.ok<2?"—":fmt(s.jitter())));
         jitterText.setTextColor(s.ok<2?QualityColors.UNKNOWN:QualityColors.jitter(s.jitter()));
         graph.setData(s.chart,AppPrefs.accent(this),Ui.surface(this));
-        StringBuilder text=new StringBuilder();int from=Math.max(0,s.log.size()-3);
-        for(int i=from;i<s.log.size();i++)text.append(s.log.get(i)).append(i<s.log.size()-1?"\n":"");
-        logText.setText(coloredLog(text.length()==0?"Готов к запуску":text.toString()));
+        renderRecentEvents(s.events);
         if(!s.error.isEmpty()){info.setText("ВНИМАНИЕ  •  "+s.error+"  ›");info.setTextColor(BAD);}
         else if(!s.warning.isEmpty()){info.setText("МАРШРУТ  •  "+s.warning+"  ›");info.setTextColor(BAD);}
         else if(!s.route.isEmpty()){info.setText((s.vpnInfo.contains("включён")?"VPN АКТИВЕН  •  ":"СЕТЬ  •  ")+s.route+
@@ -320,7 +313,8 @@ public final class MainActivity extends Activity {
         Intent i=new Intent(this,PingService.class).setAction(PingService.ACTION_START);
         i.putExtra("host",address).putExtra("label",target.name).putExtra("size",AppPrefs.number(this,"size",64))
          .putExtra("ttl",AppPrefs.number(this,"ttl",64)).putExtra("timeout",AppPrefs.number(this,"timeout",3))
-         .putExtra("interval",AppPrefs.number(this,"interval",200)).putExtra("count",AppPrefs.number(this,"count",0));
+         .putExtra("interval",AppPrefs.number(this,"interval",200)).putExtra("count",AppPrefs.number(this,"count",0))
+         .putExtra("graph_points",AppPrefs.number(this,"graph_points",150));
         try{if(Build.VERSION.SDK_INT>=26)startForegroundService(i);else startService(i);}
         catch(Exception e){message("Запуск не выполнен",String.valueOf(e.getMessage()));}
     }
@@ -493,9 +487,68 @@ public final class MainActivity extends Activity {
             w.setLayout(getResources().getDisplayMetrics().widthPixels-Ui.dp(35),-2);
         }
     }
+    private LinearLayout eventHeader(){
+        LinearLayout header=Ui.horizontal(this);
+        header.setPadding(Ui.dp(5),Ui.dp(8),Ui.dp(5),Ui.dp(7));
+        String[] labels={"№","ОТВЕТ","РАЗМЕР, Б"};
+        for(int i=0;i<labels.length;i++){
+            TextView heading=Ui.text(this,labels[i],10,Ui.muted(),true);
+            heading.setGravity(i==0?Gravity.START:i==1?Gravity.CENTER:Gravity.END);
+            header.addView(heading,new LinearLayout.LayoutParams(0,-2,i==1?1.65f:1f));
+        }
+        return header;
+    }
+    private View eventRow(PingService.ProbeEvent e){
+        if(e.number<=0){
+            TextView message=Ui.text(this,"●  "+e.message,11,
+                e.message.toLowerCase(Locale.ROOT).contains("ошиб")||
+                e.message.toLowerCase(Locale.ROOT).contains("останов")?QualityColors.YELLOW:Ui.muted(),false);
+            message.setPadding(Ui.dp(5),Ui.dp(6),Ui.dp(5),Ui.dp(6));
+            return message;
+        }
+        LinearLayout row=Ui.horizontal(this);
+        row.setPadding(Ui.dp(5),Ui.dp(7),Ui.dp(5),Ui.dp(7));
+        TextView number=Ui.mono(this,"#"+e.number,12,Ui.muted());
+        number.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
+        number.setSingleLine(true);
+        row.addView(number,new LinearLayout.LayoutParams(0,-2,1f));
+        boolean answered=e.latencyMs>=0;
+        String middle=answered?String.format(Locale.US,"%.1f мс",e.latencyMs):
+            (e.message.isEmpty()?"Нет ответа":e.message);
+        TextView response=Ui.text(this,middle,answered?13:11,
+            answered?QualityColors.rtt(e.latencyMs):
+            e.message.toLowerCase(Locale.ROOT).contains("пропуск")?QualityColors.YELLOW:QualityColors.RED,true);
+        response.setGravity(Gravity.CENTER);
+        response.setSingleLine(true);
+        response.setEllipsize(TextUtils.TruncateAt.END);
+        response.setFontFeatureSettings("tnum");
+        row.addView(response,new LinearLayout.LayoutParams(0,-2,1.65f));
+        TextView size=Ui.mono(this,String.valueOf(e.payloadBytes),12,Ui.fg());
+        size.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
+        size.setSingleLine(true);
+        row.addView(size,new LinearLayout.LayoutParams(0,-2,1f));
+        return row;
+    }
+    private void renderRecentEvents(List<PingService.ProbeEvent> records){
+        if(recentEvents==null)return;
+        recentEvents.removeAllViews();
+        int shown=0;
+        for(int i=records.size()-1;i>=0&&shown<4;i--){
+            if(records.get(i).number>0)shown++;
+        }
+        if(shown==0){
+            String status=records.isEmpty()?"Готов к запуску":records.get(records.size()-1).message;
+            recentEvents.addView(Ui.text(this,status,12,Ui.muted(),false));return;
+        }
+        ArrayList<PingService.ProbeEvent> recent=new ArrayList<>();
+        for(int i=records.size()-1;i>=0&&recent.size()<4;i--){
+            if(records.get(i).number>0)recent.add(0,records.get(i));
+        }
+        for(PingService.ProbeEvent event:recent)recentEvents.addView(eventRow(event));
+    }
     private void fullLogDialog(){
         if(journalDialog!=null&&journalDialog.isShowing())return;
-        Dialog dialog=new Dialog(this);journalDialog=dialog;journalLast="";
+        Dialog dialog=new Dialog(this);journalDialog=dialog;journalTail=null;journalSessionId=-1;
         LinearLayout frame=Ui.vertical(this);
         frame.setPadding(Ui.dp(16),Ui.dp(15),Ui.dp(16),Ui.dp(14));
         frame.setBackground(Ui.shape(Ui.surface(this),Ui.dp(20),Ui.border()));
@@ -505,10 +558,11 @@ public final class MainActivity extends Activity {
         top.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
         TextView live=Ui.chip(this,"● LIVE",false);live.setTextColor(QualityColors.GREEN);top.addView(live);
         frame.addView(top,Ui.margins(-1,-2,0,13));
+        frame.addView(eventHeader(),Ui.margins(-1,-2,0,5));
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);journalScroll=scroll;
-        TextView text=Ui.mono(this,"",12,Ui.fg());text.setTextIsSelectable(true);
-        text.setLineSpacing(Ui.dp(4),1f);text.setPadding(Ui.dp(8),Ui.dp(12),Ui.dp(8),Ui.dp(12));
-        journalBody=text;scroll.addView(text);scroll.setBackground(Ui.shape(Ui.bg(this),Ui.dp(11),Ui.border()));
+        journalRows=Ui.vertical(this);journalRows.setPadding(Ui.dp(6),Ui.dp(4),Ui.dp(6),Ui.dp(6));
+        scroll.addView(journalRows);
+        scroll.setBackground(Ui.shape(Ui.bg(this),Ui.dp(11),Ui.border()));
         frame.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         addSpace(frame,12);
         LinearLayout actions=Ui.horizontal(this);
@@ -520,7 +574,7 @@ public final class MainActivity extends Activity {
         copy.setOnClickListener(v->copy(String.join("\n",PingService.snapshot().log)));
         close.setOnClickListener(v->dialog.dismiss());
         dialog.setOnDismissListener(d->{handler.removeCallbacks(journalTick);
-            journalDialog=null;journalBody=null;journalScroll=null;journalLast="";});
+            journalDialog=null;journalRows=null;journalScroll=null;journalTail=null;journalSessionId=-1;});
         dialog.setContentView(frame);dialog.show();
         Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             w.setLayout(getResources().getDisplayMetrics().widthPixels-Ui.dp(24),
@@ -528,34 +582,29 @@ public final class MainActivity extends Activity {
         refreshJournal();handler.removeCallbacks(journalTick);handler.postDelayed(journalTick,140);
     }
     private void refreshJournal(){
-        if(journalBody==null||journalScroll==null)return;
-        String text=String.join("\n",PingService.snapshot().log);
-        if(text.isEmpty())text="События появятся после запуска проверки";
-        if(text.equals(journalLast))return;
-        boolean pinned=journalScroll.getScrollY()+journalScroll.getHeight()>=journalBody.getHeight()-Ui.dp(36);
-        journalLast=text;journalBody.setText(coloredLog(text));
-        if(pinned)journalScroll.post(()->{if(journalScroll!=null)journalScroll.fullScroll(View.FOCUS_DOWN);});
-    }
-    private static final Pattern RTT_VALUE=Pattern.compile("([0-9]+(?:[.,][0-9]+)?)\\s*мс");
-    private CharSequence coloredLog(String text){
-        SpannableStringBuilder result=new SpannableStringBuilder(text);
-        int cursor=0;
-        for(String line:text.split("\n",-1)){
-            int end=cursor+line.length();String lower=line.toLowerCase(Locale.ROOT);
-            int color;
-            if(lower.contains("нет ответа")||lower.contains("ошибка")||lower.contains("недоступ")||lower.contains("запрещ")||lower.contains("потер"))color=QualityColors.RED;
-            else if(lower.contains("vpn")||lower.contains("пропуск")||lower.contains("тайм"))color=QualityColors.YELLOW;
-            else if(line.startsWith("#")||lower.contains("завершено"))color=QualityColors.GREEN;
-            else color=Ui.muted();
-            if(end>cursor)result.setSpan(new ForegroundColorSpan(color),cursor,end,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            Matcher matcher=RTT_VALUE.matcher(line);
-            while(matcher.find())try{
-                double ms=Double.parseDouble(matcher.group(1).replace(',','.'));
-                result.setSpan(new ForegroundColorSpan(QualityColors.rtt(ms)),cursor+matcher.start(1),cursor+matcher.end(),Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            }catch(NumberFormatException ignored){}
-            cursor=end+1;
+        if(journalRows==null||journalScroll==null)return;
+        PingService.Snapshot snapshot=PingService.snapshot();
+        List<PingService.ProbeEvent> records=snapshot.events;
+        int bottom=journalRows.getHeight()-journalScroll.getHeight()-journalScroll.getScrollY();
+        boolean stickToBottom=bottom<=Ui.dp(42);
+        int tailIndex=journalTail==null?-1:records.indexOf(journalTail);
+        if(snapshot.id!=journalSessionId||tailIndex<0){
+            journalRows.removeAllViews();
+            journalSessionId=snapshot.id;
+            for(PingService.ProbeEvent event:records)journalRows.addView(eventRow(event));
+            journalTail=records.isEmpty()?null:records.get(records.size()-1);
+        }else{
+            if(tailIndex==records.size()-1)return;
+            int newEvents=records.size()-tailIndex-1;
+            int oldRows=journalRows.getChildCount();
+            int toRemove=Math.max(0,oldRows+newEvents-records.size());
+            for(int i=0;i<toRemove;i++)if(journalRows.getChildCount()>0)journalRows.removeViewAt(0);
+            for(int i=tailIndex+1;i<records.size();i++)journalRows.addView(eventRow(records.get(i)));
+            journalTail=records.get(records.size()-1);
         }
-        return result;
+        if(stickToBottom)journalScroll.post(()->{
+            if(journalScroll!=null)journalScroll.fullScroll(View.FOCUS_DOWN);
+        });
     }
     // HISTORY
     private void historyPage(){
@@ -572,7 +621,7 @@ public final class MainActivity extends Activity {
                 good?QualityColors.rtt(o.optDouble("avg")):QualityColors.RED,true);r.addView(m);
             card.addView(r);
             int sent=o.optInt("sent");int lost=o.optInt("lost");
-            double percent=sent==0?0:100.0*lost/sent;
+            double percent=sent==0?0:100.0*Math.max(0,sent-o.optInt("ok"))/sent;
             TextView lossLabel=Ui.text(this,"Потери "+fmt(percent)+"%"+
                 (o.optString("vpnInfo").contains("включён")?"  ·  с VPN":"  ·  без VPN"),11,
                 sent==0?QualityColors.UNKNOWN:QualityColors.loss(percent),false);
@@ -588,7 +637,7 @@ public final class MainActivity extends Activity {
         String out=obj.optString("label",TargetStore.friendly(this,obj.optString("host")))+"\n"+date(obj.optLong("time"))+"\n"+
           "Сеть: "+(obj.optString("vpnInfo").contains("включён")?"с VPN":"без VPN")+"\n"+
           "Отправлено: "+sent+"\nОтветов: "+obj.optInt("ok")+"\n"+
-          (method.startsWith("TCP")?"Сбои: ":"Потери: ")+bad+" ("+fmt(sent==0?0:100.0*bad/sent)+"%)\n"+
+          (method.startsWith("TCP")?"Сбои: ":"Потери: ")+bad+" ("+fmt(sent==0?0:100.0*Math.max(0,sent-obj.optInt("ok"))/sent)+"%)\n"+
           "Пропущено: "+obj.optInt("skipped")+"\nMIN / AVG / MAX: "+fmt(obj.optDouble("min"))+" / "+fmt(obj.optDouble("avg"))+" / "+fmt(obj.optDouble("max"))+" мс\n"+
           "Jitter: "+fmt(obj.optDouble("jitter"))+" мс\n"+obj.optString("warning")+"\n"+obj.optString("error")+"\n\n"+obj.optString("log");
         ScrollView view=new ScrollView(this);view.setPadding(Ui.dp(16),Ui.dp(15),Ui.dp(16),Ui.dp(8));
@@ -622,16 +671,46 @@ public final class MainActivity extends Activity {
         QrSettingsCards.section(this,page,openSections,title,title,subtitle,glyph,factory::fill);
     }
     private void networkSettings(LinearLayout root){
-        selectRow(root,"Запросов","count",new int[]{0,10,30,100,500},new String[]{"∞","10","30","100","500"});
-        selectRow(root,"Интервал","interval",new int[]{100,200,300,500,1000,2000},new String[]{"0.1","0.2","0.3","0.5","1","2"});
-        selectRow(root,"Тайм-аут","timeout",new int[]{1,2,3,4,5,8},new String[]{"1","2","3","4","5","8"});
+        selectRow(root,"Количество запросов","count",new int[]{0,10,30,100,500},new String[]{"∞","10","30","100","500"});
+        selectRow(root,"Интервал пакетов","interval",new int[]{100,200,300,500,1000,2000},new String[]{"0.1","0.2","0.3","0.5","1","2"});
+        selectRow(root,"Тайм-аут запросов","timeout",new int[]{1,2,3,4,5,8},new String[]{"1","2","3","4","5","8"});
         number(root,"Размер пакета (байт)","size",64,0,65000);
         number(root,"TTL","ttl",64,1,255);
+        graphSizeSetting(root);
         TextView note=Ui.text(this,"При активном VPN приложение предупредит о проверке через туннель. Отказ от VPN необходим для измерения обычного маршрута.",12,Ui.muted(),false);
         root.addView(note,Ui.margins(-1,-2,0,12));
         TextView reset=Ui.button(this,"СБРОС ПАРАМЕТРОВ",false);root.addView(reset);reset.setOnClickListener(v->{
             AppPrefs.put(this,"count",0);AppPrefs.put(this,"interval",200);AppPrefs.put(this,"timeout",3);
-            AppPrefs.put(this,"size",64);AppPrefs.put(this,"ttl",64);showTab(2);toast("Параметры восстановлены");});
+            AppPrefs.put(this,"size",64);AppPrefs.put(this,"ttl",64);AppPrefs.put(this,"graph_points",150);showTab(2);toast("Параметры восстановлены");});
+    }
+    private void graphSizeSetting(LinearLayout container){
+        container.addView(Ui.text(this,"Размер графика задержки",13,Ui.fg(),true),
+            Ui.margins(-1,-2,0,7));
+        LinearLayout card=Ui.vertical(this);
+        card.setPadding(Ui.dp(12),Ui.dp(11),Ui.dp(12),Ui.dp(10));
+        card.setBackground(Ui.shape(Ui.soft(this),Ui.dp(14),Ui.border()));
+        int stored=Math.max(50,Math.min(500,AppPrefs.number(this,"graph_points",150)));
+        TextView amount=Ui.text(this,stored+" пакетов",15,AppPrefs.accent(this),true);
+        amount.setGravity(Gravity.CENTER);card.addView(amount);
+        SeekBar slider=new SeekBar(this);slider.setMax(45);slider.setProgress((stored-50)/10);
+        slider.setProgressTintList(ColorStateList.valueOf(AppPrefs.accent(this)));
+        slider.setThumbTintList(ColorStateList.valueOf(AppPrefs.accent(this)));
+        slider.setProgressBackgroundTintList(ColorStateList.valueOf(Ui.border()));
+        slider.setContentDescription("История графика: от 50 до 500 пакетов");
+        slider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            @Override public void onProgressChanged(SeekBar seek,int progress,boolean fromUser){
+                int selected=50+progress*10;amount.setText(selected+" пакетов");
+                if(fromUser)AppPrefs.put(MainActivity.this,"graph_points",selected);
+            }
+            @Override public void onStartTrackingTouch(SeekBar seek){}
+            @Override public void onStopTrackingTouch(SeekBar seek){
+                AppPrefs.put(MainActivity.this,"graph_points",50+seek.getProgress()*10);
+            }
+        });
+        card.addView(slider);
+        container.addView(card,Ui.margins(-1,-2,0,12));
+        container.addView(Ui.text(this,"Используется для новых проверок. По умолчанию 150.",11,Ui.muted(),false),
+            Ui.margins(-1,-2,0,12));
     }
     private void notificationSettings(LinearLayout p){
         toggleRow(p,"Подробности","Показывать статистику в уведомлении","notify_details",true);
@@ -699,6 +778,44 @@ public final class MainActivity extends Activity {
         row.setOnClickListener(v->sw.setChecked(!sw.isChecked()));p.addView(row,Ui.margins(-1,-2,0,13));
     }
     // Smooth numeric *and color* interpolation, preserving green/yellow/red quality bands.
+    /** Same 195 ms interpolated motion as RTT, without sliding or blinking text. */
+    private final class ReplyMetric extends TextView {
+        private ValueAnimator animator;
+        private double shownOk=0,shownSent=0;
+        private int targetOk=-1,targetSent=-1;
+        ReplyMetric(){
+            super(MainActivity.this);
+            setText("0 / 0");setTextColor(QualityColors.UNKNOWN);setTextSize(20);
+            setIncludeFontPadding(false);
+            setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
+            setFontFeatureSettings("tnum");
+        }
+        void update(int ok,int sent,boolean animate){
+            ok=Math.max(0,ok);sent=Math.max(ok,sent);
+            if(ok==targetOk&&sent==targetSent)return;
+            if(animator!=null)animator.cancel();
+            final int nextOk=ok,nextSent=sent;
+            final double fromOk=shownOk,fromSent=shownSent;
+            final int startColor=getCurrentTextColor();
+            final int finishColor=nextSent==0?QualityColors.UNKNOWN:QualityColors.success(nextOk,nextSent);
+            targetOk=nextOk;targetSent=nextSent;
+            if(!animate||!AppPrefs.bool(MainActivity.this,"motion",true)){
+                shownOk=nextOk;shownSent=nextSent;
+                setText(nextOk+" / "+nextSent);setTextColor(finishColor);return;
+            }
+            ValueAnimator change=ValueAnimator.ofFloat(0f,1f);animator=change;
+            change.setDuration(195);
+            change.setInterpolator(new DecelerateInterpolator(1.2f));
+            change.addUpdateListener(a->{
+                float progress=(Float)a.getAnimatedValue();
+                shownOk=fromOk+(nextOk-fromOk)*progress;
+                shownSent=fromSent+(nextSent-fromSent)*progress;
+                setText(Math.round(shownOk)+" / "+Math.round(shownSent));
+                setTextColor(QualityColors.blend(startColor,finishColor,progress));
+            });
+            change.start();
+        }
+    }
     private final class Metric extends TextView {
         private ValueAnimator motion;
         private double shown=Double.NaN,target=Double.NaN;
