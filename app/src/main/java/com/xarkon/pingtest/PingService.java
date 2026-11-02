@@ -30,28 +30,40 @@ public final class PingService extends Service {
     private static final Pattern TTL = Pattern.compile("ttl[= ]([0-9]+)", Pattern.CASE_INSENSITIVE);
     private static Snapshot live = new Snapshot();
 
+    /** Immutable per-request journal row; payloadBytes is ICMP data size selected by the user. */
+    public static final class ProbeEvent {
+        public final int number, payloadBytes;
+        public final double latencyMs;
+        public final String message;
+        public ProbeEvent(int number,double latencyMs,int payloadBytes,String message){
+            this.number=number;this.latencyMs=latencyMs;this.payloadBytes=payloadBytes;
+            this.message=message==null?"":message;
+        }
+    }
     public static final class Snapshot {
         public boolean active=false;
         public long id=0;
         public String host="ya.ru", label="Яндекс", ip="", error="", method="ICMP", route="", vpnInfo="", warning="";
         public int port=443;
         public long version=0;
-        public int planned, sent, done, ok, lost, skipped, ttl=-1, limit=0, intervalMs=200;
+        public int planned, sent, done, ok, lost, skipped, ttl=-1, limit=0, intervalMs=200, chartLimit=150;
         public double last=-1, min=Double.MAX_VALUE, max=0, total, jitterTotal, previous=-1;
         public int jitterCount;
         public long started;
         public final ArrayList<Float> chart = new ArrayList<>();
         public final ArrayList<String> log = new ArrayList<>();
+        public final ArrayList<ProbeEvent> events = new ArrayList<>();
         public double avg(){return ok==0?-1:total/ok;}
-        public double lossPct(){return sent==0?0:100.0*lost/sent;}
+        /** Live, sent-based estimate, including not-yet-answered probes. */
+        public double lossPct(){return sent==0?0:100.0*Math.max(0,sent-ok)/sent;}
         public double jitter(){return jitterCount==0?0:jitterTotal/jitterCount;}
         public Snapshot copy(){
             Snapshot s=new Snapshot();
             s.active=active;s.id=id;s.host=host;s.label=label;s.ip=ip;s.error=error;s.method=method;s.route=route;s.vpnInfo=vpnInfo;s.warning=warning;s.port=port;s.version=version;s.planned=planned;
             s.sent=sent;s.done=done;s.ok=ok;s.lost=lost;s.skipped=skipped;s.ttl=ttl;
-            s.limit=limit;s.intervalMs=intervalMs;s.last=last;s.min=min;s.max=max;
+            s.limit=limit;s.intervalMs=intervalMs;s.chartLimit=chartLimit;s.last=last;s.min=min;s.max=max;
             s.total=total;s.previous=previous;s.jitterTotal=jitterTotal;s.jitterCount=jitterCount;
-            s.started=started;s.chart.addAll(chart);s.log.addAll(log);return s;
+            s.started=started;s.chart.addAll(chart);s.log.addAll(log);s.events.addAll(events);return s;
         }
     }
     public static Snapshot snapshot() { synchronized(LOCK){return live.copy();} }
@@ -62,7 +74,7 @@ public final class PingService extends Service {
     private WifiManager.WifiLock wifiLock;
     private NotificationManager notify;
     private String address="";
-    private int bytes=64, ttl=64, timeout=4;
+    private int bytes=64, ttl=64, timeout=4, chartLimit=150;
     private volatile boolean sessionVpn=false;
     private volatile long runId=0;
     private volatile boolean stopping=false;
@@ -86,12 +98,13 @@ public final class PingService extends Service {
         timeout=Math.max(1,Math.min(10,intent.getIntExtra("timeout",4)));
         int interval=Math.max(100,Math.min(10000,intent.getIntExtra("interval",200)));
         int limit=Math.max(0,Math.min(50000,intent.getIntExtra("count",0)));
+        chartLimit=Math.max(50,Math.min(500,intent.getIntExtra("graph_points",150)));
         boolean vpn=VpnGuard.active(this);
         sessionVpn=vpn;
         synchronized(LOCK){
             live=new Snapshot();live.active=true;live.id=System.currentTimeMillis();live.host=chosen;
             live.label=intent.getStringExtra("label")==null?chosen:intent.getStringExtra("label");
-            live.started=System.currentTimeMillis();live.limit=limit;live.intervalMs=interval;
+            live.started=System.currentTimeMillis();live.limit=limit;live.intervalMs=interval;live.chartLimit=chartLimit;
             live.method="ICMP";
             live.vpnInfo=vpn?"VPN включён":"VPN не обнаружен";
             addLog("PING TEST • " + live.label + " | "+interval+" мс"+(vpn?" | VPN":""));
@@ -143,7 +156,7 @@ public final class PingService extends Service {
             signalUpdate();
         }catch(RejectedExecutionException ex){
             synchronized(LOCK){if(capturedRun!=runId || !live.active)return;
-                live.sent--;live.skipped++;addLog("#"+seq+" • пропуск: очередь заполнена");live.version++;}
+                live.sent--;live.skipped++;addProbeEvent(seq,-1,bytes,"Пропуск: очередь заполнена");live.version++;}
             signalUpdate();checkFinished();
         }
     }
@@ -183,10 +196,10 @@ public final class PingService extends Service {
                 live.ok++;live.last=rtt;live.total+=rtt;live.min=Math.min(live.min,rtt);live.max=Math.max(live.max,rtt);
                 if(live.previous>=0){live.jitterTotal+=Math.abs(rtt-live.previous);live.jitterCount++;}
                 live.previous=rtt;if(replyTtl>=0)live.ttl=replyTtl;
-                addLog(String.format(Locale.US,"#%d  •  %.2f мс%s",seq,rtt,replyTtl<0?"":"  •  TTL "+replyTtl));
-            }else if(fatal){live.error=error;addLog("#"+seq+" • "+error);}
-            else{live.lost++;addLog("#"+seq+"  •  "+error);}
-            if(!fatal){live.chart.add(rtt<0?-1f:(float)rtt);if(live.chart.size()>120)live.chart.remove(0);}
+                addProbeEvent(seq,rtt,bytes,"");
+            }else if(fatal){live.error=error;addProbeEvent(seq,-1,bytes,error);}
+            else{live.lost++;addProbeEvent(seq,-1,bytes,error);}
+            if(!fatal){live.chart.add(rtt<0?-1f:(float)rtt);while(live.chart.size()>live.chartLimit)live.chart.remove(0);}
             live.version++;
         }
         signalUpdate();
@@ -197,7 +210,20 @@ public final class PingService extends Service {
         checkFinished();
     }
     private static void addLog(String msg){
-        if(live.log.size()>180)live.log.remove(0);live.log.add(msg);
+        if(live.log.size()>=600)live.log.remove(0);
+        live.log.add(msg);
+        addEvent(new ProbeEvent(0,-1,0,msg));
+    }
+    private static void addProbeEvent(int seq,double rtt,int payloadBytes,String error){
+        String line=String.format(Locale.US,"#%d  |  %s  |  %d",seq,
+            rtt>=0?String.format(Locale.US,"%.1f мс",rtt):error,payloadBytes);
+        if(live.log.size()>=600)live.log.remove(0);
+        live.log.add(line);
+        addEvent(new ProbeEvent(seq,rtt,payloadBytes,error));
+    }
+    private static void addEvent(ProbeEvent event){
+        if(live.events.size()>=600)live.events.remove(0);
+        live.events.add(event);
     }
     private void checkFinished(){
         synchronized(LOCK){if(!live.active || live.limit<=0 || live.planned<live.limit || live.done + live.skipped < live.planned)return;}
@@ -268,7 +294,7 @@ public final class PingService extends Service {
             JSONObject j=new JSONObject();
             j.put("id",s.id);j.put("host",s.host);j.put("ip",s.ip);j.put("time",s.started);
             j.put("method",s.method);j.put("label",s.label);j.put("vpnInfo",s.vpnInfo);j.put("route",s.route);j.put("port",s.port);j.put("warning",s.warning);j.put("error",s.error);
-            j.put("sent",s.sent);j.put("ok",s.ok);j.put("lost",s.lost);j.put("skipped",s.skipped);
+            j.put("sent",s.sent);j.put("ok",s.ok);j.put("lost",Math.max(0,s.sent-s.ok));j.put("skipped",s.skipped);
             j.put("min",s.ok>0?s.min:-1);j.put("avg",s.avg());j.put("max",s.ok>0?s.max:-1);
             j.put("jitter",s.jitter());j.put("ttl",s.ttl);j.put("finished",finished);
             j.put("log",String.join("\n",s.log));
