@@ -23,7 +23,7 @@
                 android:value="User-started, user-visible ongoing ICMP network diagnostic with persistent notification, including screen-off monitoring" />
         </service>
         <provider android:name=".UpdateApkProvider"
-            android:authorities="${applicationId}.ota"
+            android:authorities="${applicationId}.updates"
             android:exported="false" android:grantUriPermissions="true" />
     </application>
 </manifest>
