@@ -39,8 +39,24 @@ def read_bundle(value):
 
 try:
     config,key=read_bundle(bundle)
-except Exception:
-    raise SystemExit('::error::Signing secret format is not recognized as a PING TEST Base64 JSON or QR LINK ZIP bundle')
+except Exception as error:
+    # Diagnostic categories only: never print the secret, decoded data,
+    # key bytes, passwords, or raw error messages.
+    cleaned=bundle.lstrip(chr(65279)).strip()
+    if cleaned.startswith('PING_TEST_SIGNING_BUNDLE='):
+        cleaned=cleaned.split('=',1)[1].strip()
+    cleaned=cleaned.strip().strip('"').strip("'")
+    if cleaned.startswith('{'):
+        category='plain JSON'
+    else:
+        try:
+            raw_check=base64.b64decode(''.join(cleaned.split()),validate=True)
+            category='Base64 ZIP' if raw_check.startswith(b'PK') else (
+                'Base64 JSON' if raw_check.lstrip().startswith(b'{') else 'Base64 non-JSON payload')
+        except Exception:
+            category='invalid Base64 characters or padding'
+    raise SystemExit('::error::Signing secret rejected: '+category+'; '+type(error).__name__+
+                     '. No private data was printed.')
 root=pathlib.Path(os.environ['ANDROID_SDK_ROOT'])/'build-tools'/'35.0.0'
 if not root.exists():root=pathlib.Path(os.environ['ANDROID_SDK_ROOT'])/'build-tools'/'36.0.0'
 unsigned=pathlib.Path('app/build/outputs/apk/release/app-release-unsigned.apk')
