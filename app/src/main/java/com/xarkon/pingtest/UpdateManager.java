@@ -309,4 +309,32 @@ public final class UpdateManager {
             screen.show();screen.fail(friendly(e),null);
         }
     }
+
+    /** QR LINK OTA dialog retained behind the existing PING TEST settings button. */
+    public static void check(Activity activity){
+        OtaProgressDialog screen=new OtaProgressDialog(activity);
+        screen.show();screen.stage("Проверка соединения...","Подключение к серверу...");
+        check(activity,MANIFEST_URL,new Callback(){
+            public void status(String message){screen.stage(message,"Подключение к серверу...");}
+            public void release(Release info,boolean newer){
+                if(!newer){screen.current("Установлена "+BuildConfig.VERSION_NAME);return;}
+                screen.offer(info.versionName,info.notesFor(BuildConfig.VERSION_CODE),
+                    ()->downloadWithDialog(activity,screen,info));
+            }
+            public void downloaded(File file){}
+            public void error(String message){screen.fail(message,()->{screen.dismiss();check(activity);});}
+        });
+    }
+    private static void downloadWithDialog(Activity activity,OtaProgressDialog screen,Release info){
+        screen.stage("Подключение к серверу...","Подготовка загрузки");
+        download(activity,info,new Callback(){
+            public void status(String message){screen.stage(message,"Проверка соединения и безопасности");}
+            public void progress(long received,long total){screen.downloading(received,total);}
+            public void release(Release value,boolean newer){}
+            public void downloaded(File file){
+                screen.readyInstall(info.versionName,()->{screen.dismiss();install(activity);});
+            }
+            public void error(String message){screen.fail(message,()->downloadWithDialog(activity,screen,info));}
+        });
+    }
 }
