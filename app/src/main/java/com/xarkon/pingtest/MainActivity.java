@@ -284,7 +284,7 @@ public final class MainActivity extends Activity {
             double ms=s.last>=0?s.last:s.avg();
             qualityState.setText(ms<0?(s.lost>0?"НЕТ ОТВЕТА":"ОЖИДАНИЕ"):
                 ms<=45?"ОТЛИЧНО":ms<=110?"СТАБИЛЬНО":ms<=240?"ПОВЫШЕННАЯ":"ВЫСОКАЯ");
-            qualityState.setTextColor(ms<0?(s.sent>0?QualityColors.RED:QualityColors.UNKNOWN):QualityColors.rtt(ms));
+            qualityState.setTextColor(ms<0?(s.lost>0?QualityColors.RED:QualityColors.UNKNOWN):QualityColors.rtt(ms));
         }
         sendText.update(s.ok,s.sent,sameSession);
         bestText.setText("MIN  "+(s.ok==0?"—":fmt(s.min)));

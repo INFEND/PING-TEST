@@ -309,8 +309,8 @@ public final class PingService extends Service {
         String routeLabel=s.vpnInfo.contains("включён")?"С VPN":
                 s.vpnInfo.contains("не определён")?"Маршрут неизвестен":"Без VPN";
         String content=s.sent==0?"Подключение к узлу…":
-                String.format(Locale.US,"%s · %d/%d завершено · %.0f мс · потери %.1f%%",
-                    routeLabel,s.ok,classified,s.avg(),s.lossPct());
+                String.format(Locale.US,"%s · %d/%d завершено · %s · потери %.1f%%",
+                    routeLabel,s.ok,classified,s.ok>0?String.format(Locale.US,"%.0f мс",s.avg()):"ожидание",s.lossPct());
         if(!s.error.isEmpty())content=s.error;
         else if(!s.warning.isEmpty())content=s.warning;
         if(s.ok==0&&s.lost>0&&s.error.isEmpty())content="0 / "+(s.ok+s.lost)+" • ответов нет";
