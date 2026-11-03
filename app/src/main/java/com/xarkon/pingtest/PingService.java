@@ -125,9 +125,9 @@ public final class PingService extends Service {
                     "Прямой маршрут (PING TEST вне VPN)":"Не определён";
                 InetAddress[] resolved=InetAddress.getAllByName(chosen);
                 if(resolved.length==0)throw new UnknownHostException(chosen);
-                address=preferV4(resolved).getHostAddress();
-                synchronized(LOCK){if(!live.active || runId!=expectedRun)return;
-                    live.ip=address;live.route=route;live.method="ICMP";
+                final String resolvedAddress=preferV4(resolved).getHostAddress();
+                synchronized(LOCK){if(!live.active || runId!=expectedRun || stopping)return;
+                    live.ip=resolvedAddress;live.route=route;live.method="ICMP";
                     addLog("Маршрут: "+route);live.version++;}
                 signalUpdate();
                 ScheduledExecutorService c=clock;

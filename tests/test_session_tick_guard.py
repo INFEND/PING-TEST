@@ -6,11 +6,11 @@ SRC=(pathlib.Path(__file__).resolve().parents[1] /
 
 class SessionTickGuard(unittest.TestCase):
     def test_scheduler_captures_own_run(self):
-        self.assertIn("final long scheduledRun=runId;", SRC)
+        self.assertIn("c.scheduleAtFixedRate(()->tick(expectedRun)", SRC)
         self.assertIn("final int seq;final long capturedRun=scheduledRun;", SRC)
     def test_old_tick_cannot_dispatch_new_run_probe(self):
         self.assertIn("if(stopping || runId!=capturedRun || !live.active ||", SRC)
-        self.assertIn("workers.execute(()->probe(seq,capturedRun));", SRC)
+        self.assertIn("workers.execute(()->probe(seq,capturedRun,probeAddress));", SRC)
     def test_completion_uses_callback_run(self):
         self.assertIn("private void checkFinished(long expectedRun)", SRC)
         self.assertIn("runId!=expectedRun", SRC)

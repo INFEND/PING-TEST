@@ -12,7 +12,7 @@ class SessionIsolationTests(unittest.TestCase):
         self.assertIn("finishRun(capturedRun,error)",SRC)
         self.assertNotIn("if(capturedRun==runId)finish(error)",SRC)
     def test_route_callback_uses_captured_session(self):
-        self.assertIn("final long scheduledRun=runId;",SRC)
+        self.assertIn("c.scheduleAtFixedRate(()->tick(expectedRun)",SRC)
         self.assertIn("finishRun(scheduledRun,",SRC)
     def test_guard_is_serialized_with_finish(self):
         self.assertIn("private synchronized void finishRun(long expectedRun,String reason)",SRC)
