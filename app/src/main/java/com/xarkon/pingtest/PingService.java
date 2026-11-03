@@ -131,7 +131,7 @@ public final class PingService extends Service {
                     addLog("Маршрут: "+route);live.version++;}
                 signalUpdate();
                 ScheduledExecutorService c=clock;
-                if(c!=null&&!c.isShutdown()&&!stopping)c.scheduleAtFixedRate(this::tick,0,interval,TimeUnit.MILLISECONDS);
+                if(c!=null&&!c.isShutdown()&&!stopping)c.scheduleAtFixedRate(()->tick(expectedRun),0,interval,TimeUnit.MILLISECONDS);
                 refreshNotification(true);
             }catch(Exception e){
                 // DNS may complete after the user stopped this run. Never let an
@@ -150,24 +150,26 @@ public final class PingService extends Service {
     private String safeMessage(Throwable t){
         String msg=t.getMessage();return msg==null?t.getClass().getSimpleName():msg;
     }
-    private void tick(){
-        if(stopping)return;
-        final long scheduledRun=runId;
+    private void tick(long scheduledRun){
+        if(stopping || scheduledRun!=runId)return;
         VpnGuard.Route currentRoute=VpnGuard.route(this);
         if(currentRoute!=VpnGuard.Route.UNKNOWN&&sessionRoute!=VpnGuard.Route.UNKNOWN
             &&currentRoute!=sessionRoute){
             finishRun(scheduledRun,"Маршрут VPN изменился. Начните новую проверку.");return;
         }
         final int seq;final long capturedRun=scheduledRun;
+        final String probeAddress;
         synchronized(LOCK){
             // An old scheduler may fire after STOP and a new START.
             // Never let it dispatch probes or increment the new session's counters.
             if(stopping || runId!=capturedRun || !live.active ||
                 (live.limit>0 && live.planned>=live.limit))return;
+            probeAddress=live.ip;
+            if(probeAddress==null || probeAddress.isEmpty())return;
             seq=++live.planned;live.sent++;live.version++;
         }
         try{
-            workers.execute(()->probe(seq,capturedRun));
+            workers.execute(()->probe(seq,capturedRun,probeAddress));
             signalUpdate();
         }catch(RejectedExecutionException ex){
             synchronized(LOCK){if(capturedRun!=runId || !live.active)return;
@@ -207,12 +209,12 @@ public final class PingService extends Service {
         return null;
     }
 
-    private void probe(int seq,long capturedRun){
+    private void probe(int seq,long capturedRun,String probeAddress){
         double rtt=-1;int replyTtl=-1;String error="";
         java.lang.Process process=null;
         try{
             String binary=new File("/system/bin/ping").exists()?"/system/bin/ping":"ping";
-            String[] cmd={binary,"-n","-c","1","-W",Integer.toString(timeout),"-s",Integer.toString(bytes),"-t",Integer.toString(ttl),address};
+            String[] cmd={binary,"-n","-c","1","-W",Integer.toString(timeout),"-s",Integer.toString(bytes),"-t",Integer.toString(ttl),probeAddress};
             process=new ProcessBuilder(cmd).redirectErrorStream(true).start();
             boolean finished=process.waitFor(timeout+3,TimeUnit.SECONDS);
             if(!finished){process.destroyForcibly();error="Истекло время ожидания";}
@@ -225,7 +227,7 @@ public final class PingService extends Service {
                 // A time= token in diagnostic text is not proof of an ICMP reply.
                 // Only accept an actual successful ping process and a reply line
                 // naming the probed address. Prevents false-positive latency.
-                double[] parsed=process.exitValue()==0?parseIcmpReply(output,address):null;
+                double[] parsed=process.exitValue()==0?parseIcmpReply(output,probeAddress):null;
                 if(parsed!=null){rtt=parsed[0];replyTtl=(int)parsed[1];}
                 if(rtt<0){
                     if(output.contains("Operation not permitted")||output.contains("Permission denied"))error="Пинг запрещён системой";
