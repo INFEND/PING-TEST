@@ -253,7 +253,7 @@ public final class MainActivity extends Activity {
     private void refreshPing(){if(tab!=0||go==null)return;
         PingService.Snapshot s=PingService.snapshot();refreshStatus(s);
         if(!s.active && !s.host.equals(TargetStore.selected(this).host)){
-            ip.setText(VpnGuard.active(this)?"● VPN активен  ·  результат через VPN":"● Без VPN  ·  прямое измерение");
+            ip.setText(VpnGuard.statusText(this));
             last.update(-1,false,false);avg.update(-1,false,false);failed.update(-1,false,false);
             if(qualityState!=null){qualityState.setText("ОЖИДАНИЕ");qualityState.setTextColor(QualityColors.UNKNOWN);}
             sendText.update(0,0,false);bestText.setText("MIN  —");maxText.setText("MAX  —");jitterText.setText("JITTER  —");
@@ -272,9 +272,11 @@ public final class MainActivity extends Activity {
         }
         if(s.version==renderedVersion&&s.id==seenSession)return;
         boolean sameSession=s.id==seenSession;renderedVersion=s.version;seenSession=s.id;
-        boolean vpn=VpnGuard.active(this);
-        ip.setText(s.active||s.done>0?(s.vpnInfo.contains("включён")?"● С VPN  ·  маршрут через туннель":"● Без VPN  ·  прямой маршрут"):
-            vpn?"● VPN активен  ·  результат через VPN":"● Без VPN  ·  прямое измерение");
+        ip.setText(s.active||s.done>0?(
+            s.vpnInfo.contains("включён")?"● Через VPN · маршрут этого сеанса":
+            s.vpnInfo.contains("не определён")?"● Маршрут не определён":
+            "● Прямой маршрут · VPN не используется"):
+            VpnGuard.statusText(this));
         last.update(s.last,false,sameSession);avg.update(s.avg(),false,sameSession);
         boolean unusable=s.ok==0&&s.lost==0&&!s.error.isEmpty();
         failed.update(s.sent==0||unusable?-1:s.lossPct(),true,sameSession);

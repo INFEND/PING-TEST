@@ -77,6 +77,9 @@ jobs:
         with:
           gradle-version: '9.6.1'
 
+      - name: Run VPN routing regression checks
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
       - name: Compile Android release
         run: gradle --no-daemon :app:assembleRelease
 

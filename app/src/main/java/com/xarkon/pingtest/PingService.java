@@ -75,7 +75,7 @@ public final class PingService extends Service {
     private NotificationManager notify;
     private String address="";
     private int bytes=64, ttl=64, timeout=4, chartLimit=150;
-    private volatile boolean sessionVpn=false;
+    private volatile VpnGuard.Route sessionRoute=VpnGuard.Route.UNKNOWN;
     private volatile long runId=0;
     private volatile boolean stopping=false;
     private long lastNotify=0, lastGraph=0;
@@ -99,14 +99,16 @@ public final class PingService extends Service {
         int interval=Math.max(100,Math.min(10000,intent.getIntExtra("interval",200)));
         int limit=Math.max(0,Math.min(50000,intent.getIntExtra("count",0)));
         chartLimit=Math.max(50,Math.min(500,intent.getIntExtra("graph_points",150)));
-        boolean vpn=VpnGuard.active(this);
-        sessionVpn=vpn;
+        VpnGuard.Route selectedRoute=VpnGuard.route(this);
+        boolean vpn=selectedRoute==VpnGuard.Route.VPN;
+        sessionRoute=selectedRoute;
         synchronized(LOCK){
             live=new Snapshot();live.active=true;live.id=System.currentTimeMillis();live.host=chosen;
             live.label=intent.getStringExtra("label")==null?chosen:intent.getStringExtra("label");
             live.started=System.currentTimeMillis();live.limit=limit;live.intervalMs=interval;live.chartLimit=chartLimit;
             live.method="ICMP";
-            live.vpnInfo=vpn?"VPN включён":"VPN не обнаружен";
+            live.vpnInfo=vpn?"VPN включён":selectedRoute==VpnGuard.Route.DIRECT?
+                "Прямой маршрут PING TEST":"Маршрут не определён";
             addLog("PING TEST • " + live.label + " | "+interval+" мс"+(vpn?" | VPN":""));
         }
         stopping=false; address="";
@@ -117,7 +119,8 @@ public final class PingService extends Service {
         clock=Executors.newSingleThreadScheduledExecutor(r->{Thread t=new Thread(r,"PingClock");t.setDaemon(true);return t;});
         new Thread(()->{
             try{
-                String route=vpn?"Через VPN":"Без VPN";
+                String route=vpn?"Через VPN":selectedRoute==VpnGuard.Route.DIRECT?
+                    "Прямой маршрут (PING TEST вне VPN)":"Не определён";
                 InetAddress[] resolved=InetAddress.getAllByName(chosen);
                 if(resolved.length==0)throw new UnknownHostException(chosen);
                 address=preferV4(resolved).getHostAddress();
@@ -145,7 +148,11 @@ public final class PingService extends Service {
     }
     private void tick(){
         if(stopping)return;
-        if(VpnGuard.active(this)!=sessionVpn){finish("VPN изменился. Начните новый тест для корректного маршрута.");return;}
+        VpnGuard.Route currentRoute=VpnGuard.route(this);
+        if(currentRoute!=VpnGuard.Route.UNKNOWN&&sessionRoute!=VpnGuard.Route.UNKNOWN
+            &&currentRoute!=sessionRoute){
+            finish("Маршрут VPN изменился. Начните новую проверку.");return;
+        }
         final int seq;final long capturedRun=runId;
         synchronized(LOCK){
             if(!live.active || (live.limit>0 && live.planned>=live.limit))return;
