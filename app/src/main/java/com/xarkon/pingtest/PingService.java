@@ -134,9 +134,11 @@ public final class PingService extends Service {
                 if(c!=null&&!c.isShutdown()&&!stopping)c.scheduleAtFixedRate(this::tick,0,interval,TimeUnit.MILLISECONDS);
                 refreshNotification(true);
             }catch(Exception e){
-                synchronized(LOCK){if(runId!=expectedRun)return;
+                // DNS may complete after the user stopped this run. Never let an
+                // old resolver terminate a newer session or overwrite its error.
+                synchronized(LOCK){if(runId!=expectedRun || !live.active || stopping)return;
                     live.error="Подключение: "+safeMessage(e);addLog("ОШИБКА: "+safeMessage(e));live.version++;}
-                finish("Проверка недоступна: "+safeMessage(e));
+                finishRun(expectedRun,"Проверка недоступна: "+safeMessage(e));
             }
         },"PingDNS").start();
         return START_NOT_STICKY;
@@ -150,10 +152,11 @@ public final class PingService extends Service {
     }
     private void tick(){
         if(stopping)return;
+        final long scheduledRun=runId;
         VpnGuard.Route currentRoute=VpnGuard.route(this);
         if(currentRoute!=VpnGuard.Route.UNKNOWN&&sessionRoute!=VpnGuard.Route.UNKNOWN
             &&currentRoute!=sessionRoute){
-            finish("Маршрут VPN изменился. Начните новую проверку.");return;
+            finishRun(scheduledRun,"Маршрут VPN изменился. Начните новую проверку.");return;
         }
         final int seq;final long capturedRun=runId;
         synchronized(LOCK){
@@ -255,7 +258,7 @@ public final class PingService extends Service {
             live.version++;
         }
         signalUpdate();
-        if(fatal){if(capturedRun==runId)finish(error);return;}
+        if(fatal){finishRun(capturedRun,error);return;}
         if(capturedRun!=runId)return;
         refreshNotification(false);
         if(seq%10==0)persist(false);
@@ -279,7 +282,7 @@ public final class PingService extends Service {
     }
     private void checkFinished(){
         synchronized(LOCK){if(!live.active || live.limit<=0 || live.planned<live.limit || live.done + live.skipped < live.planned)return;}
-        finish("Завершено");
+        finishRun(runId,"Завершено");
     }
     private void acquireLocks(){
         try{PowerManager pm=(PowerManager)getSystemService(POWER_SERVICE);wakeLock=pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"pingtest:monitor");wakeLock.acquire();}catch(Exception e){Log.w("PING TEST","WakeLock",e);}
@@ -357,6 +360,12 @@ public final class PingService extends Service {
             j.put("log",String.join("\n",s.log));
             HistoryStore.upsert(this,j);
         }catch(Exception e){Log.e("PING TEST","History save",e);}
+    }
+    /** Terminate only the session that produced the callback.
+     * A late probe/DNS callback must never stop a subsequent session. */
+    private synchronized void finishRun(long expectedRun,String reason){
+        synchronized(LOCK){if(runId!=expectedRun || !live.active)return;}
+        finish(reason);
     }
     private synchronized void finish(String reason){
         if(stopping)return;stopping=true;
