@@ -175,8 +175,8 @@ public final class PingService extends Service {
     private static boolean hasIcmpReply(String output,String expectedAddress){
         if(expectedAddress==null||expectedAddress.isEmpty())return false;
         String quoted=Pattern.quote(expectedAddress);
-        Pattern reply=Pattern.compile("(?m)^\\\\d+ bytes from "+quoted+
-            "(?:%[\\\\w.:-]+)?(?::|\\\\s).*\\\\btime[=<]\\\\s*[0-9]+(?:[.,][0-9]+)?\\\\b",
+        Pattern reply=Pattern.compile("(?m)^\\d+ bytes from "+quoted+
+            "(?:%[\\w.:-]+)?(?::|\\s).*\\btime[=<]\\s*[0-9]+(?:[.,][0-9]+)?\\b",
             Pattern.CASE_INSENSITIVE);
         return reply.matcher(output).find();
     }
