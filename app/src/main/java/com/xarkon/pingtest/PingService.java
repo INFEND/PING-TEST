@@ -285,7 +285,12 @@ public final class PingService extends Service {
         PendingIntent p=PendingIntent.getActivity(this,0,open,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         Intent stop=new Intent(this,PingService.class).setAction(ACTION_STOP);
         PendingIntent stopP=PendingIntent.getService(this,1,stop,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        String content=s.sent==0?"Подключение к узлу…":String.format(Locale.US,"%s · %d/%d · %.0f мс · %s %.1f%%",(s.vpnInfo.contains("включён")?"С VPN":"Без VPN"),s.ok,s.sent,s.avg(),"потери",s.lossPct());
+        int classified=s.ok+s.lost;
+        String routeLabel=s.vpnInfo.contains("включён")?"С VPN":
+                s.vpnInfo.contains("не определён")?"Маршрут неизвестен":"Без VPN";
+        String content=s.sent==0?"Подключение к узлу…":
+                String.format(Locale.US,"%s · %d/%d завершено · %.0f мс · потери %.1f%%",
+                    routeLabel,s.ok,classified,s.avg(),s.lossPct());
         if(!s.error.isEmpty())content=s.error;
         else if(!s.warning.isEmpty())content=s.warning;
         if(s.ok==0&&s.lost>0&&s.error.isEmpty())content="0 / "+(s.ok+s.lost)+" • ответов нет";
