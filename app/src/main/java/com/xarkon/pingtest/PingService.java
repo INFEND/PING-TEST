@@ -172,13 +172,31 @@ public final class PingService extends Service {
      * Require a full reply line from the selected address, not arbitrary
      * stderr/stdout text that happens to contain a time token.
      */
-    private static boolean hasIcmpReply(String output,String expectedAddress){
-        if(expectedAddress==null||expectedAddress.isEmpty())return false;
+    /**
+     * Parse latency and TTL from the SAME reply line for the selected IP.
+     * Summary lines and unrelated diagnostic text must never supply an RTT.
+     */
+    private static double[] parseIcmpReply(String output,String expectedAddress){
+        if(expectedAddress==null||expectedAddress.isEmpty())return null;
         String quoted=Pattern.quote(expectedAddress);
         Pattern reply=Pattern.compile("(?m)^\\d+ bytes from "+quoted+
-            "(?:%[\\w.:-]+)?(?::|\\s).*\\btime[=<]\\s*[0-9]+(?:[.,][0-9]+)?\\b",
-            Pattern.CASE_INSENSITIVE);
-        return reply.matcher(output).find();
+            "(?:%[\\w.:-]+)?(?::|\\s)[^\\r\\n]*$",Pattern.CASE_INSENSITIVE);
+        Matcher lines=reply.matcher(output);
+        while(lines.find()){
+            String line=lines.group();
+            Matcher time=TIME.matcher(line);
+            if(!time.find())continue;
+            try{
+                double latency=Double.parseDouble(time.group(1).replace(',','.'));
+                if(!Double.isFinite(latency)||latency<0)continue;
+                Matcher ttl=TTL.matcher(line);
+                int replyTtl=-1;
+                if(ttl.find())try{replyTtl=Integer.parseInt(ttl.group(1));}
+                    catch(NumberFormatException ignored){}
+                return new double[]{latency,replyTtl};
+            }catch(NumberFormatException ignored){}
+        }
+        return null;
     }
 
     private void probe(int seq,long capturedRun){
@@ -199,10 +217,8 @@ public final class PingService extends Service {
                 // A time= token in diagnostic text is not proof of an ICMP reply.
                 // Only accept an actual successful ping process and a reply line
                 // naming the probed address. Prevents false-positive latency.
-                boolean validReply=process.exitValue()==0 && hasIcmpReply(output,address);
-                Matcher m=TIME.matcher(output);Matcher t=TTL.matcher(output);
-                if(validReply&&m.find())try{rtt=Double.parseDouble(m.group(1).replace(',','.'));}catch(NumberFormatException ignored){}
-                if(rtt>=0&&t.find())try{replyTtl=Integer.parseInt(t.group(1));}catch(NumberFormatException ignored){}
+                double[] parsed=process.exitValue()==0?parseIcmpReply(output,address):null;
+                if(parsed!=null){rtt=parsed[0];replyTtl=(int)parsed[1];}
                 if(rtt<0){
                     if(output.contains("Operation not permitted")||output.contains("Permission denied"))error="Пинг запрещён системой";
                     else if(output.contains("unknown option")||output.contains("invalid option")||output.contains("usage:"))error="Параметры ping не поддерживаются прошивкой";
