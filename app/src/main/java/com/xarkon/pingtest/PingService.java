@@ -158,9 +158,12 @@ public final class PingService extends Service {
             &&currentRoute!=sessionRoute){
             finishRun(scheduledRun,"Маршрут VPN изменился. Начните новую проверку.");return;
         }
-        final int seq;final long capturedRun=runId;
+        final int seq;final long capturedRun=scheduledRun;
         synchronized(LOCK){
-            if(!live.active || (live.limit>0 && live.planned>=live.limit))return;
+            // An old scheduler may fire after STOP and a new START.
+            // Never let it dispatch probes or increment the new session's counters.
+            if(stopping || runId!=capturedRun || !live.active ||
+                (live.limit>0 && live.planned>=live.limit))return;
             seq=++live.planned;live.sent++;live.version++;
         }
         try{
@@ -169,7 +172,7 @@ public final class PingService extends Service {
         }catch(RejectedExecutionException ex){
             synchronized(LOCK){if(capturedRun!=runId || !live.active)return;
                 live.sent--;live.skipped++;addProbeEvent(seq,-1,bytes,"Пропуск: очередь заполнена");live.version++;}
-            signalUpdate();checkFinished();
+            signalUpdate();checkFinished(capturedRun);
         }
     }
     /**
@@ -262,7 +265,7 @@ public final class PingService extends Service {
         if(capturedRun!=runId)return;
         refreshNotification(false);
         if(seq%10==0)persist(false);
-        checkFinished();
+        checkFinished(capturedRun);
     }
     private static void addLog(String msg){
         if(live.log.size()>=600)live.log.remove(0);
@@ -280,9 +283,12 @@ public final class PingService extends Service {
         if(live.events.size()>=600)live.events.remove(0);
         live.events.add(event);
     }
-    private void checkFinished(){
-        synchronized(LOCK){if(!live.active || live.limit<=0 || live.planned<live.limit || live.done + live.skipped < live.planned)return;}
-        finishRun(runId,"Завершено");
+    private void checkFinished(long expectedRun){
+        synchronized(LOCK){
+            if(stopping || runId!=expectedRun || !live.active || live.limit<=0 ||
+                live.planned<live.limit || live.done+live.skipped<live.planned)return;
+        }
+        finishRun(expectedRun,"Завершено");
     }
     private void acquireLocks(){
         try{PowerManager pm=(PowerManager)getSystemService(POWER_SERVICE);wakeLock=pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"pingtest:monitor");wakeLock.acquire();}catch(Exception e){Log.w("PING TEST","WakeLock",e);}
