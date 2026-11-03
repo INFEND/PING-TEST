@@ -167,6 +167,20 @@ public final class PingService extends Service {
             signalUpdate();checkFinished();
         }
     }
+    /**
+     * Android toybox ping prints "N bytes from ADDRESS: ... time=...".
+     * Require a full reply line from the selected address, not arbitrary
+     * stderr/stdout text that happens to contain a time token.
+     */
+    private static boolean hasIcmpReply(String output,String expectedAddress){
+        if(expectedAddress==null||expectedAddress.isEmpty())return false;
+        String quoted=Pattern.quote(expectedAddress);
+        Pattern reply=Pattern.compile("(?m)^\\\\d+ bytes from "+quoted+
+            "(?:%[\\\\w.:-]+)?(?::|\\\\s).*\\\\btime[=<]\\\\s*[0-9]+(?:[.,][0-9]+)?\\\\b",
+            Pattern.CASE_INSENSITIVE);
+        return reply.matcher(output).find();
+    }
+
     private void probe(int seq,long capturedRun){
         double rtt=-1;int replyTtl=-1;String error="";
         java.lang.Process process=null;
@@ -182,9 +196,13 @@ public final class PingService extends Service {
                 InputStream input=process.getInputStream();
                 while(buffer.size()<8192&&(read=input.read(temp,0,Math.min(temp.length,8192-buffer.size())))!=-1)buffer.write(temp,0,read);
                 String output=new String(buffer.toByteArray(),StandardCharsets.UTF_8);
+                // A time= token in diagnostic text is not proof of an ICMP reply.
+                // Only accept an actual successful ping process and a reply line
+                // naming the probed address. Prevents false-positive latency.
+                boolean validReply=process.exitValue()==0 && hasIcmpReply(output,address);
                 Matcher m=TIME.matcher(output);Matcher t=TTL.matcher(output);
-                if(m.find())try{rtt=Double.parseDouble(m.group(1).replace(',','.'));}catch(NumberFormatException ignored){}
-                if(t.find())try{replyTtl=Integer.parseInt(t.group(1));}catch(NumberFormatException ignored){}
+                if(validReply&&m.find())try{rtt=Double.parseDouble(m.group(1).replace(',','.'));}catch(NumberFormatException ignored){}
+                if(rtt>=0&&t.find())try{replyTtl=Integer.parseInt(t.group(1));}catch(NumberFormatException ignored){}
                 if(rtt<0){
                     if(output.contains("Operation not permitted")||output.contains("Permission denied"))error="Пинг запрещён системой";
                     else if(output.contains("unknown option")||output.contains("invalid option")||output.contains("usage:"))error="Параметры ping не поддерживаются прошивкой";
