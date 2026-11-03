@@ -282,7 +282,7 @@ public final class MainActivity extends Activity {
         failed.update(s.sent==0||unusable?-1:s.lossPct(),true,sameSession);
         if(qualityState!=null){
             double ms=s.last>=0?s.last:s.avg();
-            qualityState.setText(ms<0?(s.sent>0?"НЕТ ОТВЕТА":"ОЖИДАНИЕ"):
+            qualityState.setText(ms<0?(s.lost>0?"НЕТ ОТВЕТА":"ОЖИДАНИЕ"):
                 ms<=45?"ОТЛИЧНО":ms<=110?"СТАБИЛЬНО":ms<=240?"ПОВЫШЕННАЯ":"ВЫСОКАЯ");
             qualityState.setTextColor(ms<0?(s.sent>0?QualityColors.RED:QualityColors.UNKNOWN):QualityColors.rtt(ms));
         }

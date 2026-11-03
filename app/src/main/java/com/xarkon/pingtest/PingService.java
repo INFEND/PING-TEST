@@ -54,9 +54,10 @@ public final class PingService extends Service {
         public final ArrayList<String> log = new ArrayList<>();
         public final ArrayList<ProbeEvent> events = new ArrayList<>();
         public double avg(){return ok==0?-1:total/ok;}
-        /** Only completed probes can be classified as replies or packet loss.
-         * In-flight probes are pending, never prematurely counted as lost. */
-        public double lossPct(){return done==0?0:100.0*Math.max(0,done-ok)/done;}
+        /** Loss is measured only among completed ICMP outcomes (reply or timeout).
+         * Pending probes, skipped dispatches and fatal local execution errors are
+         * not evidence of packet loss. */
+        public double lossPct(){int classified=ok+lost;return classified==0?0:100.0*lost/classified;}
         public double jitter(){return jitterCount==0?0:jitterTotal/jitterCount;}
         public Snapshot copy(){
             Snapshot s=new Snapshot();
@@ -287,7 +288,7 @@ public final class PingService extends Service {
         String content=s.sent==0?"Подключение к узлу…":String.format(Locale.US,"%s · %d/%d · %.0f мс · %s %.1f%%",(s.vpnInfo.contains("включён")?"С VPN":"Без VPN"),s.ok,s.sent,s.avg(),"потери",s.lossPct());
         if(!s.error.isEmpty())content=s.error;
         else if(!s.warning.isEmpty())content=s.warning;
-        if(s.ok==0&&s.sent>0)content=s.ok+" / "+s.sent+" • ответов нет";
+        if(s.ok==0&&s.lost>0&&s.error.isEmpty())content="0 / "+(s.ok+s.lost)+" • ответов нет";
         if(!AppPrefs.bool(this,"notifications",true)) content="Активная проверка сети · нажмите для просмотра";
         Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,CHANNEL):new Notification.Builder(this);
         b.setSmallIcon(android.R.drawable.stat_notify_sync).setContentTitle("PING TEST • "+s.label)
