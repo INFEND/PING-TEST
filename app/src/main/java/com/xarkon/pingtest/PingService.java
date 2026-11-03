@@ -224,14 +224,23 @@ public final class PingService extends Service {
                 if(rtt<0){
                     if(output.contains("Operation not permitted")||output.contains("Permission denied"))error="Пинг запрещён системой";
                     else if(output.contains("unknown option")||output.contains("invalid option")||output.contains("usage:"))error="Параметры ping не поддерживаются прошивкой";
-                    else if(output.contains("Network is unreachable"))error="Сеть недоступна";
+                    else if(output.contains("Network is unreachable")||
+                            output.contains("No route to host")||
+                            output.contains("Network is down")||
+                            output.contains("connect: Invalid argument"))error="Сеть недоступна";
                     else error="Нет ответа";
                 }
             }
         }catch(InterruptedException e){Thread.currentThread().interrupt();error="Прервано";}
         catch(Exception e){error="Ошибка запуска ping: "+e.getMessage();}
         finally{if(process!=null){try{process.destroy();}catch(Exception ignored){}}}
-        boolean fatal=error.startsWith("Пинг запрещён")||error.startsWith("Параметры ping")||error.startsWith("Ошибка запуска ping");
+        // Local routing/permission/command failures are not ICMP packet loss.
+        // Only an attempted probe with no reply contributes to loss statistics.
+        boolean fatal=error.startsWith("Пинг запрещён")||
+                error.startsWith("Параметры ping")||
+                error.startsWith("Ошибка запуска ping")||
+                error.startsWith("Сеть недоступна")||
+                error.equals("Прервано");
         synchronized(LOCK){
             if(!live.active||runId!=capturedRun)return;
             live.done++;

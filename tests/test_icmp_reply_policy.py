@@ -15,6 +15,14 @@ class IcmpReplyPolicyTests(unittest.TestCase):
     def test_output_must_match_expected_address(self):
         self.assertIn("Pattern.quote(expectedAddress)", SERVICE)
         self.assertIn("Matcher lines=reply.matcher(output);", SERVICE)
+    def test_local_route_failures_not_counted_as_packet_loss(self):
+        self.assertIn('output.contains("Network is unreachable")', SERVICE)
+        self.assertIn('output.contains("No route to host")', SERVICE)
+        self.assertIn('output.contains("Network is down")', SERVICE)
+        self.assertIn('error.startsWith("Сеть недоступна")', SERVICE)
+        self.assertIn('error.equals("Прервано")', SERVICE)
+        self.assertIn('else if(fatal){live.error=error;', SERVICE)
+        self.assertIn('else{live.lost++;', SERVICE)
     def test_no_fake_fallback_rtt(self):
         self.assertNotIn("rtt=timeout", SERVICE)
 
