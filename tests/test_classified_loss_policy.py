@@ -23,7 +23,8 @@ class ClassifiedLossTests(unittest.TestCase):
 
     def test_notification_uses_classified_denominator(self):
         self.assertIn("int classified=s.ok+s.lost;", SERVICE)
-        self.assertIn("routeLabel,s.ok,classified,s.avg(),s.lossPct()", SERVICE)
+        self.assertIn('routeLabel,s.ok,classified,s.ok>0?String.format(Locale.US,"%.0f мс",s.avg()):"ожидание",s.lossPct()', SERVICE)
+        self.assertNotIn("routeLabel,s.ok,classified,s.avg(),s.lossPct()", SERVICE)
         self.assertNotIn("s.ok,s.sent,s.avg()", SERVICE)
 
     def test_history_persists_distinct_outcomes(self):
