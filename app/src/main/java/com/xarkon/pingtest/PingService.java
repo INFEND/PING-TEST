@@ -54,8 +54,9 @@ public final class PingService extends Service {
         public final ArrayList<String> log = new ArrayList<>();
         public final ArrayList<ProbeEvent> events = new ArrayList<>();
         public double avg(){return ok==0?-1:total/ok;}
-        /** Live, sent-based estimate, including not-yet-answered probes. */
-        public double lossPct(){return sent==0?0:100.0*Math.max(0,sent-ok)/sent;}
+        /** Only completed probes can be classified as replies or packet loss.
+         * In-flight probes are pending, never prematurely counted as lost. */
+        public double lossPct(){return done==0?0:100.0*Math.max(0,done-ok)/done;}
         public double jitter(){return jitterCount==0?0:jitterTotal/jitterCount;}
         public Snapshot copy(){
             Snapshot s=new Snapshot();
@@ -335,7 +336,7 @@ public final class PingService extends Service {
             JSONObject j=new JSONObject();
             j.put("id",s.id);j.put("host",s.host);j.put("ip",s.ip);j.put("time",s.started);
             j.put("method",s.method);j.put("label",s.label);j.put("vpnInfo",s.vpnInfo);j.put("route",s.route);j.put("port",s.port);j.put("warning",s.warning);j.put("error",s.error);
-            j.put("sent",s.sent);j.put("ok",s.ok);j.put("lost",Math.max(0,s.sent-s.ok));j.put("skipped",s.skipped);
+            j.put("sent",s.sent);j.put("done",s.done);j.put("ok",s.ok);j.put("lost",s.lost);j.put("skipped",s.skipped);
             j.put("min",s.ok>0?s.min:-1);j.put("avg",s.avg());j.put("max",s.ok>0?s.max:-1);
             j.put("jitter",s.jitter());j.put("ttl",s.ttl);j.put("finished",finished);
             j.put("log",String.join("\n",s.log));

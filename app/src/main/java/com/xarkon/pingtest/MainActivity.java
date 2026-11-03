@@ -623,7 +623,8 @@ public final class MainActivity extends Activity {
                 good?QualityColors.rtt(o.optDouble("avg")):QualityColors.RED,true);r.addView(m);
             card.addView(r);
             int sent=o.optInt("sent");int lost=o.optInt("lost");
-            double percent=sent==0?0:100.0*Math.max(0,sent-o.optInt("ok"))/sent;
+            int completed=o.has("done")?o.optInt("done"):sent;
+            double percent=completed==0?0:100.0*Math.max(0,completed-o.optInt("ok"))/completed;
             TextView lossLabel=Ui.text(this,"Потери "+fmt(percent)+"%"+
                 (o.optString("vpnInfo").contains("включён")?"  ·  с VPN":"  ·  без VPN"),11,
                 sent==0?QualityColors.UNKNOWN:QualityColors.loss(percent),false);
@@ -639,7 +640,9 @@ public final class MainActivity extends Activity {
         String out=obj.optString("label",TargetStore.friendly(this,obj.optString("host")))+"\n"+date(obj.optLong("time"))+"\n"+
           "Сеть: "+(obj.optString("vpnInfo").contains("включён")?"с VPN":"без VPN")+"\n"+
           "Отправлено: "+sent+"\nОтветов: "+obj.optInt("ok")+"\n"+
-          (method.startsWith("TCP")?"Сбои: ":"Потери: ")+bad+" ("+fmt(sent==0?0:100.0*Math.max(0,sent-obj.optInt("ok"))/sent)+"%)\n"+
+          (method.startsWith("TCP")?"Сбои: ":"Потери: ")+bad+" ("+fmt((obj.has("done")?obj.optInt("done"):sent)==0?0:
+            100.0*Math.max(0,(obj.has("done")?obj.optInt("done"):sent)-obj.optInt("ok"))/
+            (obj.has("done")?obj.optInt("done"):sent))+"%)\n"+
           "Пропущено: "+obj.optInt("skipped")+"\nMIN / AVG / MAX: "+fmt(obj.optDouble("min"))+" / "+fmt(obj.optDouble("avg"))+" / "+fmt(obj.optDouble("max"))+" мс\n"+
           "Jitter: "+fmt(obj.optDouble("jitter"))+" мс\n"+obj.optString("warning")+"\n"+obj.optString("error")+"\n\n"+obj.optString("log");
         ScrollView view=new ScrollView(this);view.setPadding(Ui.dp(16),Ui.dp(15),Ui.dp(16),Ui.dp(8));
