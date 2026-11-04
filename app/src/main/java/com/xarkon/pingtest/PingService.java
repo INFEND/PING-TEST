@@ -107,7 +107,10 @@ public final class PingService extends Service {
         boolean vpn=selectedRoute==VpnGuard.Route.VPN;
         sessionRoute=selectedRoute;
         synchronized(LOCK){
-            live=new Snapshot();live.active=true;live.id=System.currentTimeMillis();live.host=chosen;
+            live=new Snapshot();live.active=true;
+            // Millisecond timestamps can repeat across rapid STOP/START cycles.
+            // Keep history keys and stale-callback guards strictly increasing.
+            live.id=Math.max(System.currentTimeMillis(),runId+1);live.host=chosen;
             live.label=intent.getStringExtra("label")==null?chosen:intent.getStringExtra("label");
             live.started=System.currentTimeMillis();live.limit=limit;live.intervalMs=interval;live.chartLimit=chartLimit;
             live.method="ICMP";
