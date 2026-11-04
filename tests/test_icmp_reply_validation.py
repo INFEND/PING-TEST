@@ -25,7 +25,7 @@ class IcmpReplyValidationTests(unittest.TestCase):
         self.assertIn("Matcher lines=reply.matcher(output)", self.parser)
 
     def test_failed_process_cannot_report_success(self):
-        self.assertIn("process.exitValue()==0?parseIcmpReply(output,probeAddress):null",
+        self.assertIn("exitCode==0?parseIcmpReply(output,probeAddress):null",
                       self.source)
 
     def test_expected_toybox_reply_shape(self):
