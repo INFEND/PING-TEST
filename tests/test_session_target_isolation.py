@@ -13,10 +13,10 @@ class TimerAndAddressIsolationTests(unittest.TestCase):
         self.assertIn("scheduledRun!=runId",SERVICE)
     def test_probe_captures_target_address(self):
         self.assertIn("probeAddress=live.ip",SERVICE)
-        self.assertIn("probe(seq,capturedRun,probeAddress)",SERVICE)
-        self.assertIn("private void probe(int seq,long capturedRun,String probeAddress)",SERVICE)
+        self.assertIn("probe(seq,capturedRun,probeAddress,probeBytes,probeTtl,probeTimeout)",SERVICE)
+        self.assertIn("private void probe(int seq,long capturedRun,String probeAddress,int probeBytes,int probeTtl,int probeTimeout)",SERVICE)
     def test_command_and_reply_use_same_target(self):
-        self.assertIn("Integer.toString(ttl),probeAddress}",SERVICE)
+        self.assertIn("Integer.toString(probeTtl),probeAddress}",SERVICE)
         self.assertIn("parseIcmpReply(output,probeAddress)",SERVICE)
 
 if __name__=="__main__":
