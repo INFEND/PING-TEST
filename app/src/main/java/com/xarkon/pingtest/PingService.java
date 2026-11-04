@@ -164,6 +164,7 @@ public final class PingService extends Service {
         }
         final int seq;final long capturedRun=scheduledRun;
         final String probeAddress;
+        final int probeBytes,probeTtl,probeTimeout;
         synchronized(LOCK){
             // An old scheduler may fire after STOP and a new START.
             // Never let it dispatch probes or increment the new session's counters.
@@ -171,14 +172,15 @@ public final class PingService extends Service {
                 (live.limit>0 && live.planned>=live.limit))return;
             probeAddress=live.ip;
             if(probeAddress==null || probeAddress.isEmpty())return;
+            probeBytes=bytes;probeTtl=ttl;probeTimeout=timeout;
             seq=++live.planned;live.sent++;live.version++;
         }
         try{
-            workers.execute(()->probe(seq,capturedRun,probeAddress));
+            workers.execute(()->probe(seq,capturedRun,probeAddress,probeBytes,probeTtl,probeTimeout));
             signalUpdate();
         }catch(RejectedExecutionException ex){
             synchronized(LOCK){if(capturedRun!=runId || !live.active)return;
-                live.sent--;live.skipped++;addProbeEvent(seq,-1,bytes,"Пропуск: очередь заполнена");live.version++;}
+                live.sent--;live.skipped++;addProbeEvent(seq,-1,probeBytes,"Пропуск: очередь заполнена");live.version++;}
             signalUpdate();checkFinished(capturedRun);
         }
     }
@@ -214,17 +216,17 @@ public final class PingService extends Service {
         return null;
     }
 
-    private void probe(int seq,long capturedRun,String probeAddress){
+    private void probe(int seq,long capturedRun,String probeAddress,int probeBytes,int probeTtl,int probeTimeout){
         double rtt=-1;int replyTtl=-1;String error="";
         java.lang.Process process=null;
         try{
             String binary=new File("/system/bin/ping").exists()?"/system/bin/ping":"ping";
-            String[] cmd={binary,"-n","-c","1","-W",Integer.toString(timeout),"-s",Integer.toString(bytes),"-t",Integer.toString(ttl),probeAddress};
+            String[] cmd={binary,"-n","-c","1","-W",Integer.toString(probeTimeout),"-s",Integer.toString(probeBytes),"-t",Integer.toString(probeTtl),probeAddress};
             process=new ProcessBuilder(cmd).redirectErrorStream(true).start();
             activePings.add(process);
             // STOP may race with process startup: never leave a newly spawned ping alive.
             if(stopping || capturedRun!=runId)process.destroyForcibly();
-            boolean finished=process.waitFor(timeout+3,TimeUnit.SECONDS);
+            boolean finished=process.waitFor(probeTimeout+3,TimeUnit.SECONDS);
             if(!finished){process.destroyForcibly();error="Истекло время ожидания";}
             else{
                 ByteArrayOutputStream buffer=new ByteArrayOutputStream();
@@ -264,9 +266,9 @@ public final class PingService extends Service {
                 live.ok++;live.last=rtt;live.total+=rtt;live.min=Math.min(live.min,rtt);live.max=Math.max(live.max,rtt);
                 if(live.previous>=0){live.jitterTotal+=Math.abs(rtt-live.previous);live.jitterCount++;}
                 live.previous=rtt;if(replyTtl>=0)live.ttl=replyTtl;
-                addProbeEvent(seq,rtt,bytes,"");
-            }else if(fatal){live.error=error;addProbeEvent(seq,-1,bytes,error);}
-            else{live.lost++;addProbeEvent(seq,-1,bytes,error);}
+                addProbeEvent(seq,rtt,probeBytes,"");
+            }else if(fatal){live.error=error;addProbeEvent(seq,-1,probeBytes,error);}
+            else{live.lost++;addProbeEvent(seq,-1,probeBytes,error);}
             if(!fatal){live.chart.add(rtt<0?-1f:(float)rtt);while(live.chart.size()>live.chartLimit)live.chart.remove(0);}
             live.version++;
         }
