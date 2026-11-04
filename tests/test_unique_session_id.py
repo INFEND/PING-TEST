@@ -6,7 +6,7 @@ SOURCE = (pathlib.Path(__file__).resolve().parents[1] /
 
 class UniqueSessionIdTests(unittest.TestCase):
     def test_new_run_id_exceeds_previous_even_with_same_millisecond(self):
-        self.assertRegex(SOURCE, r"live\\.id\\s*=\\s*Math\\.max\\(System\\.currentTimeMillis\\(\\),\\s*runId\\s*\\+\\s*1\\)")
+        self.assertIn("live.id=Math.max(System.currentTimeMillis(),runId+1)", SOURCE)
 
     def test_old_session_callbacks_remain_guarded(self):
         self.assertIn("runId!=expectedRun", SOURCE)
