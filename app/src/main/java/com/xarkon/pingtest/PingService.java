@@ -72,6 +72,8 @@ public final class PingService extends Service {
 
     private ScheduledExecutorService clock;
     private ThreadPoolExecutor workers;
+    // Track active native ping processes so STOP can terminate them immediately.
+    private final Set<Process> activePings=Collections.newSetFromMap(new ConcurrentHashMap<Process,Boolean>());
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
     private NotificationManager notify;
@@ -216,6 +218,9 @@ public final class PingService extends Service {
             String binary=new File("/system/bin/ping").exists()?"/system/bin/ping":"ping";
             String[] cmd={binary,"-n","-c","1","-W",Integer.toString(timeout),"-s",Integer.toString(bytes),"-t",Integer.toString(ttl),probeAddress};
             process=new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            activePings.add(process);
+            // STOP may race with process startup: never leave a newly spawned ping alive.
+            if(stopping || capturedRun!=runId)process.destroyForcibly();
             boolean finished=process.waitFor(timeout+3,TimeUnit.SECONDS);
             if(!finished){process.destroyForcibly();error="Истекло время ожидания";}
             else{
@@ -241,7 +246,7 @@ public final class PingService extends Service {
             }
         }catch(InterruptedException e){Thread.currentThread().interrupt();error="Прервано";}
         catch(Exception e){error="Ошибка запуска ping: "+e.getMessage();}
-        finally{if(process!=null){try{process.destroy();}catch(Exception ignored){}}}
+        finally{if(process!=null){activePings.remove(process);try{process.destroy();}catch(Exception ignored){}}}
         // Local routing/permission/command failures are not ICMP packet loss.
         // Only an attempted probe with no reply contributes to loss statistics.
         boolean fatal=error.startsWith("Пинг запрещён")||
@@ -375,11 +380,15 @@ public final class PingService extends Service {
         synchronized(LOCK){if(runId!=expectedRun || !live.active)return;}
         finish(reason);
     }
+    private void terminateActivePings(){
+        for(Process process:activePings){try{process.destroyForcibly();}catch(Exception ignored){}}
+    }
     private synchronized void finish(String reason){
         if(stopping)return;stopping=true;
         synchronized(LOCK){if(!live.active){stopSelf();return;}live.active=false;addLog("● "+reason);live.version++;if(!reason.equals("Завершено")&&!reason.equals("Остановлено пользователем"))live.error=reason;}
         if(clock!=null)clock.shutdownNow();
         if(workers!=null)workers.shutdownNow();
+        terminateActivePings();
         signalUpdate();persist(true);releaseLocks();notify.cancel(GRAPH);
         if(Build.VERSION.SDK_INT>=24)stopForeground(STOP_FOREGROUND_REMOVE);else stopForeground(true);
         stopSelf();
@@ -387,6 +396,7 @@ public final class PingService extends Service {
     @Override public void onDestroy(){
         if(!stopping){synchronized(LOCK){live.active=false;addLog("● Служба остановлена системой");}persist(true);}
         if(clock!=null)clock.shutdownNow();if(workers!=null)workers.shutdownNow();
+        terminateActivePings();
         releaseLocks();notify.cancel(GRAPH);super.onDestroy();
     }
     private void signalUpdate(){
