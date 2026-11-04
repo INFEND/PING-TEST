@@ -22,7 +22,8 @@ class PingProcessLifecycleTests(unittest.TestCase):
 
     def test_stop_and_destroy_terminate_processes(self):
         self.assertGreaterEqual(self.source.count('terminateActivePings();'), 2)
-        self.assertIn('for(Process process:activePings)', self.source)
+        self.assertIn('for(java.lang.Process process:activePings)', self.source)
+        self.assertNotIn('for(Process process:activePings)', self.source)
 
 if __name__ == '__main__':
     unittest.main()
