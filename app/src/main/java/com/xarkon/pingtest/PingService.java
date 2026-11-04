@@ -73,7 +73,7 @@ public final class PingService extends Service {
     private ScheduledExecutorService clock;
     private ThreadPoolExecutor workers;
     // Track active native ping processes so STOP can terminate them immediately.
-    private final Set<Process> activePings=Collections.newSetFromMap(new ConcurrentHashMap<Process,Boolean>());
+    private final Set<java.lang.Process> activePings=Collections.newSetFromMap(new ConcurrentHashMap<java.lang.Process,Boolean>());
     private PowerManager.WakeLock wakeLock;
     private WifiManager.WifiLock wifiLock;
     private NotificationManager notify;
@@ -381,7 +381,7 @@ public final class PingService extends Service {
         finish(reason);
     }
     private void terminateActivePings(){
-        for(Process process:activePings){try{process.destroyForcibly();}catch(Exception ignored){}}
+        for(java.lang.Process process:activePings){try{process.destroyForcibly();}catch(Exception ignored){}}
     }
     private synchronized void finish(String reason){
         if(stopping)return;stopping=true;
