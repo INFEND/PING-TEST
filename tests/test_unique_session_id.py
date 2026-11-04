@@ -1,5 +1,4 @@
 import pathlib
-import re
 import unittest
 
 SOURCE = (pathlib.Path(__file__).resolve().parents[1] /
