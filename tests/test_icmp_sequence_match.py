@@ -10,7 +10,7 @@ class IcmpSequenceTest(unittest.TestCase):
         self.assertNotIn(r'\\bicmp_seq[= ]\\d+\\b', SOURCE)
 
     def test_exact_sequence_boundary(self):
-        pattern = re.compile(r'\\bicmp_seq[= ]1\\b')
+        pattern = re.compile(r'\bicmp_seq[= ]1\b')
         self.assertIsNotNone(pattern.search("icmp_seq=1 ttl=55 time=3.4"))
         self.assertIsNotNone(pattern.search("icmp_seq 1 ttl=55 time=3.4"))
         for line in ("icmp_seq=2 ttl=55 time=3.4", "icmp_seq=10 ttl=55 time=3.4", "icmp_seq=11 ttl=55 time=3.4"):
