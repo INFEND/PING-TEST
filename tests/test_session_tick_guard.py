@@ -10,7 +10,7 @@ class SessionTickGuard(unittest.TestCase):
         self.assertIn("final int seq;final long capturedRun=scheduledRun;", SRC)
     def test_old_tick_cannot_dispatch_new_run_probe(self):
         self.assertIn("if(stopping || runId!=capturedRun || !live.active ||", SRC)
-        self.assertIn("workers.execute(()->probe(seq,capturedRun,probeAddress));", SRC)
+        self.assertIn("workers.execute(()->probe(seq,capturedRun,probeAddress,probeBytes,probeTtl,probeTimeout));", SRC)
     def test_completion_uses_callback_run(self):
         self.assertIn("private void checkFinished(long expectedRun)", SRC)
         self.assertIn("runId!=expectedRun", SRC)
