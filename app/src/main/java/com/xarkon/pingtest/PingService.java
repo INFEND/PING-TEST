@@ -237,7 +237,8 @@ public final class PingService extends Service {
                 // A time= token in diagnostic text is not proof of an ICMP reply.
                 // Only accept an actual successful ping process and a reply line
                 // naming the probed address. Prevents false-positive latency.
-                double[] parsed=process.exitValue()==0?parseIcmpReply(output,probeAddress):null;
+                int exitCode=process.exitValue();
+                double[] parsed=exitCode==0?parseIcmpReply(output,probeAddress):null;
                 if(parsed!=null){rtt=parsed[0];replyTtl=(int)parsed[1];}
                 if(rtt<0){
                     if(output.contains("Operation not permitted")||output.contains("Permission denied"))error="Пинг запрещён системой";
@@ -246,6 +247,9 @@ public final class PingService extends Service {
                             output.contains("No route to host")||
                             output.contains("Network is down")||
                             output.contains("connect: Invalid argument"))error="Сеть недоступна";
+                    // toybox/iputils ping uses exit 1 for no replies, but exit 2+
+                    // for local execution errors. Do not count these as packet loss.
+                    else if(exitCode>=2)error="Локальная ошибка ping (код "+exitCode+")";
                     else error="Нет ответа";
                 }
             }
@@ -258,6 +262,7 @@ public final class PingService extends Service {
                 error.startsWith("Параметры ping")||
                 error.startsWith("Ошибка запуска ping")||
                 error.startsWith("Сеть недоступна")||
+                error.startsWith("Локальная ошибка ping")||
                 error.equals("Прервано");
         synchronized(LOCK){
             if(!live.active||runId!=capturedRun)return;
