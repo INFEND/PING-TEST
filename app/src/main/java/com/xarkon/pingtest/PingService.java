@@ -186,7 +186,7 @@ public final class PingService extends Service {
     }
     /**
      * Android toybox ping prints "N bytes from ADDRESS: ... time=...".
-     * Require a full reply line from the selected address, not arbitrary
+     * Require an ICMP sequence marker on a reply from the selected address, not arbitrary
      * stderr/stdout text that happens to contain a time token.
      */
     /**
@@ -197,7 +197,7 @@ public final class PingService extends Service {
         if(expectedAddress==null||expectedAddress.isEmpty())return null;
         String quoted=Pattern.quote(expectedAddress);
         Pattern reply=Pattern.compile("(?m)^\\d+ bytes from "+quoted+
-            "(?:%[\\w.:-]+)?(?::|\\s)[^\\r\\n]*$",Pattern.CASE_INSENSITIVE);
+            "(?:%[\\w.:-]+)?(?::|\\s)(?=[^\\r\\n]*\\bicmp_seq[= ]\\d+\\b)[^\\r\\n]*$",Pattern.CASE_INSENSITIVE);
         Matcher lines=reply.matcher(output);
         while(lines.find()){
             String line=lines.group();
