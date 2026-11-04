@@ -132,6 +132,16 @@ jobs:
               --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
               --title "PING TEST $VERSION" --notes-file "release_notes/$TAG.txt" --latest
           fi
+          # A transient API failure may leave a valid release with only one
+          # asset. Repair only missing assets, never overwrite existing ones.
+          for asset in PING-TEST.apk update.json; do
+            if ! gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+              --jq '.assets[].name' | grep -Fxq "$asset"; then
+              echo "Restoring missing OTA asset: $asset"
+              gh release upload "$TAG" "dist/$asset" --repo "$GITHUB_REPOSITORY"
+            fi
+          done
+          # Verify the final release, not merely the local dist directory.
           for asset in PING-TEST.apk update.json; do
             gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
               --jq '.assets[].name' | grep -Fxq "$asset"
