@@ -26,7 +26,7 @@ public final class PingService extends Service {
     private static final String CHANNEL = "ping_monitor_v1";
     private static final int ONGOING = 117, GRAPH = 118;
     private static final Object LOCK = new Object();
-    private static final Pattern TIME = Pattern.compile("time[=<]\\s*([0-9]+(?:[.,][0-9]+)?)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TIME = Pattern.compile("\\btime[=<]\\s*([0-9]+(?:[.,][0-9]+)?)(?![0-9.,eE+\\-\\w])", Pattern.CASE_INSENSITIVE);
     private static final Pattern TTL = Pattern.compile("ttl[= ]([0-9]+)", Pattern.CASE_INSENSITIVE);
     private static Snapshot live = new Snapshot();
 
