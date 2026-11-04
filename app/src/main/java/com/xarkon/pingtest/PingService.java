@@ -227,7 +227,7 @@ public final class PingService extends Service {
             // STOP may race with process startup: never leave a newly spawned ping alive.
             if(stopping || capturedRun!=runId)process.destroyForcibly();
             boolean finished=process.waitFor(probeTimeout+3,TimeUnit.SECONDS);
-            if(!finished){process.destroyForcibly();error="Истекло время ожидания";}
+            if(!finished){process.destroyForcibly();error="Локальный тайм-аут процесса ping";}
             else{
                 ByteArrayOutputStream buffer=new ByteArrayOutputStream();
                 byte[] temp=new byte[2048];int read;
@@ -250,6 +250,7 @@ public final class PingService extends Service {
                     // toybox/iputils ping uses exit 1 for no replies, but exit 2+
                     // for local execution errors. Do not count these as packet loss.
                     else if(exitCode>=2)error="Локальная ошибка ping (код "+exitCode+")";
+                    else if(exitCode==0)error="Ответ ping не распознан";
                     else error="Нет ответа";
                 }
             }
@@ -263,6 +264,8 @@ public final class PingService extends Service {
                 error.startsWith("Ошибка запуска ping")||
                 error.startsWith("Сеть недоступна")||
                 error.startsWith("Локальная ошибка ping")||
+                error.startsWith("Локальный тайм-аут процесса ping")||
+                error.startsWith("Ответ ping не распознан")||
                 error.equals("Прервано");
         synchronized(LOCK){
             if(!live.active||runId!=capturedRun)return;
