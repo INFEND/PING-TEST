@@ -1,12 +1,14 @@
 """Guardrails for local ping execution failures versus real ICMP loss."""
 from pathlib import Path
+import re
 import unittest
 
 SOURCE = (Path(__file__).resolve().parents[1] / "app/src/main/java/com/xarkon/pingtest/PingService.java").read_text(encoding="utf-8")
 
 class PingLocalFailureRegression(unittest.TestCase):
     def test_process_watchdog_is_not_packet_loss(self):
-        self.assertIn('if(!finished){process.destroyForcibly();error="Локальный тайм-аут процесса ping";}', SOURCE)
+        # Match the timeout branch semantically, not its old one-line formatting.
+        self.assertRegex(SOURCE, r'if\s*\(\s*!finished\s*\)\s*\{[\s\S]*?process\.destroyForcibly\(\);[\s\S]*?error\s*=\s*"Локальный тайм-аут процесса ping";')
         self.assertIn('error.startsWith("Локальный тайм-аут процесса ping")||', SOURCE)
 
     def test_unparsed_success_is_not_packet_loss(self):
