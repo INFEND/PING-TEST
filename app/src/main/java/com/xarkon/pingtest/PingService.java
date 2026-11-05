@@ -231,14 +231,39 @@ public final class PingService extends Service {
             activePings.add(process);
             // STOP may race with process startup: never leave a newly spawned ping alive.
             if(stopping || capturedRun!=runId)process.destroyForcibly();
+            // Drain stdout concurrently: waiting before reading can deadlock if
+            // a vendor ping fills the OS pipe while the parent waits for exit.
+            // Keep at most 8 KiB of diagnostics but continue draining the pipe.
+            final ByteArrayOutputStream buffer=new ByteArrayOutputStream();
+            final InputStream input=process.getInputStream();
+            Thread reader=new Thread(()->{
+                byte[] temp=new byte[2048];int read;
+                try{
+                    while((read=input.read(temp))!=-1){
+                        synchronized(buffer){
+                            int remaining=8192-buffer.size();
+                            if(remaining>0)buffer.write(temp,0,Math.min(read,remaining));
+                        }
+                    }
+                }catch(IOException ignored){
+                    // Forced termination closes the pipe; the caller classifies it.
+                }
+            },"PingOutput");
+            reader.setDaemon(true);
+            reader.start();
             boolean finished=process.waitFor(probeTimeout+3,TimeUnit.SECONDS);
             if(!finished){process.destroyForcibly();error="Локальный тайм-аут процесса ping";}
             else{
-                ByteArrayOutputStream buffer=new ByteArrayOutputStream();
-                byte[] temp=new byte[2048];int read;
-                InputStream input=process.getInputStream();
-                while(buffer.size()<8192&&(read=input.read(temp,0,Math.min(temp.length,8192-buffer.size())))!=-1)buffer.write(temp,0,read);
-                String output=new String(buffer.toByteArray(),StandardCharsets.UTF_8);
+                // Process has exited; wait briefly for the reader to consume
+                // remaining pipe bytes before parsing the reply.
+                reader.join(1000);
+                if(reader.isAlive()){
+                    process.getInputStream().close();
+                    reader.join(200);
+                }
+                String output;
+                synchronized(buffer){output=new String(buffer.toByteArray(),StandardCharsets.UTF_8);}
+
                 // A time= token in diagnostic text is not proof of an ICMP reply.
                 // Only accept an actual successful ping process and a reply line
                 // naming the probed address. Prevents false-positive latency.
