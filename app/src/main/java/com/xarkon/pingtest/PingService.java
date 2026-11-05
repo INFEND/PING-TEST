@@ -235,6 +235,7 @@ public final class PingService extends Service {
             // a vendor ping fills the OS pipe while the parent waits for exit.
             // Keep at most 8 KiB of diagnostics but continue draining the pipe.
             final ByteArrayOutputStream buffer=new ByteArrayOutputStream();
+            final java.util.concurrent.atomic.AtomicBoolean outputTruncated=new java.util.concurrent.atomic.AtomicBoolean(false);
             final InputStream input=process.getInputStream();
             Thread reader=new Thread(()->{
                 byte[] temp=new byte[2048];int read;
@@ -242,6 +243,7 @@ public final class PingService extends Service {
                     while((read=input.read(temp))!=-1){
                         synchronized(buffer){
                             int remaining=8192-buffer.size();
+                            if(read>remaining)outputTruncated.set(true);
                             if(remaining>0)buffer.write(temp,0,Math.min(read,remaining));
                         }
                     }
@@ -283,7 +285,7 @@ public final class PingService extends Service {
                 if(rtt<0){
                     // A vendor may emit more than the bounded 8 KiB capture.
                     // Missing reply text in truncated diagnostics is not evidence of packet loss.
-                    if(buffer.size()>=8192)error="Вывод ping превышает 8 КиБ";
+                    if(outputTruncated.get())error="Вывод ping превышает 8 КиБ";
                     else if(output.contains("Operation not permitted")||output.contains("Permission denied"))error="Пинг запрещён системой";
                     else if(output.contains("unknown option")||output.contains("invalid option")||output.contains("usage:"))error="Параметры ping не поддерживаются прошивкой";
                     else if(output.contains("Network is unreachable")||
