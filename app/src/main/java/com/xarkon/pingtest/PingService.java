@@ -296,7 +296,7 @@ public final class PingService extends Service {
             }
         }catch(InterruptedException e){Thread.currentThread().interrupt();error="Прервано";}
         catch(Exception e){error="Ошибка запуска ping: "+e.getMessage();}
-        finally{if(process!=null){activePings.remove(process);try{process.destroy();}catch(Exception ignored){}}}
+        finally{if(process!=null){activePings.remove(process);try{if(process.isAlive())process.destroyForcibly();else process.destroy();}catch(Exception ignored){}}}
         // Local routing/permission/command failures are not ICMP packet loss.
         // Only an attempted probe with no reply contributes to loss statistics.
         boolean fatal=error.startsWith("Пинг запрещён")||
