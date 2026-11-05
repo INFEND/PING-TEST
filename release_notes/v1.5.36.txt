@@ -1,0 +1,6 @@
+PING TEST 1.5.36
+
+• DNS-имя диагностируемого узла теперь разрешается через активную сеть самого приложения (ConnectivityManager.getActiveNetwork и Network.getAllByName).
+• При split tunneling исключение PING TEST из VPN учитывается также при DNS-разрешении, без выбора чужой сети из getAllNetworks.
+• Добавлены регрессионные проверки привязки DNS к сети UID.
+• Существующая обработка ICMP, OTA и подпись приложения сохранены.
