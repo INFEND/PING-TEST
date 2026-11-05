@@ -275,6 +275,9 @@ public final class PingService extends Service {
                     try{input.close();}catch(IOException ignored){}
                     reader.join(200);
                 }
+                // An unfinished reader means diagnostics may be incomplete.
+                // Do not infer packet loss from an unfinished read.
+                if(reader.isAlive())outputReadFailed.set(true);
                 String output;
                 synchronized(buffer){output=new String(buffer.toByteArray(),StandardCharsets.UTF_8);}
 
