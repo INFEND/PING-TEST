@@ -14,7 +14,7 @@ class PingLocalFailureRegression(unittest.TestCase):
         self.assertIn('error.startsWith("Ответ ping не распознан")||', SOURCE)
 
     def test_actual_no_reply_remains_loss(self):
-        self.assertIn('else error="Нет ответа";', SOURCE)
+        self.assertIn('else if(exitCode==1)error="Нет ответа";', SOURCE)
         self.assertIn('else{live.lost++;addProbeEvent(seq,-1,probeBytes,error);}', SOURCE)
 
     def test_fatal_outcomes_do_not_enter_graph(self):
