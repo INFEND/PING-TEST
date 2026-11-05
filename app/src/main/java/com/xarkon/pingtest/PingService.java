@@ -236,6 +236,7 @@ public final class PingService extends Service {
             // Keep at most 8 KiB of diagnostics but continue draining the pipe.
             final ByteArrayOutputStream buffer=new ByteArrayOutputStream();
             final java.util.concurrent.atomic.AtomicBoolean outputTruncated=new java.util.concurrent.atomic.AtomicBoolean(false);
+            final java.util.concurrent.atomic.AtomicBoolean outputReadFailed=new java.util.concurrent.atomic.AtomicBoolean(false);
             final InputStream input=process.getInputStream();
             Thread reader=new Thread(()->{
                 byte[] temp=new byte[2048];int read;
@@ -248,7 +249,8 @@ public final class PingService extends Service {
                         }
                     }
                 }catch(IOException ignored){
-                    // Forced termination closes the pipe; the caller classifies it.
+                    // Incomplete diagnostics cannot prove an ICMP timeout.
+                    outputReadFailed.set(true);
                 }
             },"PingOutput");
             reader.setDaemon(true);
@@ -286,6 +288,7 @@ public final class PingService extends Service {
                     // A vendor may emit more than the bounded 8 KiB capture.
                     // Missing reply text in truncated diagnostics is not evidence of packet loss.
                     if(outputTruncated.get())error="Вывод ping превышает 8 КиБ";
+                    else if(outputReadFailed.get())error="Не удалось полностью прочитать вывод ping";
                     else if(output.contains("Operation not permitted")||output.contains("Permission denied"))error="Пинг запрещён системой";
                     else if(output.contains("unknown option")||output.contains("invalid option")||output.contains("usage:"))error="Параметры ping не поддерживаются прошивкой";
                     else if(output.contains("Network is unreachable")||
