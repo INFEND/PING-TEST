@@ -314,6 +314,7 @@ public final class PingService extends Service {
                 error.startsWith("Локальная ошибка ping")||
                 error.startsWith("Локальный тайм-аут процесса ping")||
                 error.startsWith("Вывод ping превышает 8 КиБ")||
+                error.startsWith("Не удалось полностью прочитать вывод ping")||
                 error.startsWith("Ответ ping не распознан")||
                 error.equals("Прервано");
         synchronized(LOCK){
