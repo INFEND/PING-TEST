@@ -10,7 +10,7 @@ class PingExitStatusRegression(unittest.TestCase):
         self.assertRegex(SOURCE, r"exitCode\s*==\s*0\s*\?\s*parseIcmpReply")
 
     def test_local_exit_failure_is_diagnostic(self):
-        self.assertIn('else if(exitCode>=2)error="Локальная ошибка ping (код "+exitCode+")";', SOURCE)
+        self.assertIn('else error="Локальная ошибка ping (код "+exitCode+")";', SOURCE)
 
     def test_local_error_is_excluded_from_packet_loss(self):
         self.assertIn('error.startsWith("Локальная ошибка ping")||', SOURCE)
@@ -18,8 +18,8 @@ class PingExitStatusRegression(unittest.TestCase):
         self.assertRegex(SOURCE, r"else\{live\.lost\+\+")
 
     def test_ping_exit_one_still_allows_timeout_loss(self):
-        self.assertIn('else if(exitCode>=2)', SOURCE)
-        self.assertIn('else error="Нет ответа";', SOURCE)
+        self.assertIn('else if(exitCode==1)error="Нет ответа";', SOURCE)
+        self.assertNotIn('else error="Нет ответа";', SOURCE)
 
 if __name__ == "__main__":
     unittest.main()
