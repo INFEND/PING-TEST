@@ -247,11 +247,11 @@ public final class PingService extends Service {
                             output.contains("No route to host")||
                             output.contains("Network is down")||
                             output.contains("connect: Invalid argument"))error="Сеть недоступна";
-                    // toybox/iputils ping uses exit 1 for no replies, but exit 2+
-                    // for local execution errors. Do not count these as packet loss.
-                    else if(exitCode>=2)error="Локальная ошибка ping (код "+exitCode+")";
+                    // Only exit 1 means no ICMP reply. Any other nonzero code,
+                    // including negative vendor-specific codes, is a local failure.
+                    else if(exitCode==1)error="Нет ответа";
                     else if(exitCode==0)error="Ответ ping не распознан";
-                    else error="Нет ответа";
+                    else error="Локальная ошибка ping (код "+exitCode+")";
                 }
             }
         }catch(InterruptedException e){Thread.currentThread().interrupt();error="Прервано";}
