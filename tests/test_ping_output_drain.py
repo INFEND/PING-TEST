@@ -14,7 +14,8 @@ class PingOutputDrainTests(unittest.TestCase):
         self.assertIn('if(remaining>0)buffer.write(temp,0,Math.min(read,remaining));', SOURCE)
     def test_timeout_remains_bounded_and_fatal(self):
         self.assertIn('process.waitFor(probeTimeout+3,TimeUnit.SECONDS)', SOURCE)
-        self.assertIn('if(!finished){process.destroyForcibly();error="Локальный тайм-аут процесса ping";}', SOURCE)
+        self.assertRegex(SOURCE, r'(?s)if\s*\(!finished\)\s*\{.*?process\.destroyForcibly\(\);.*?error="Локальный тайм-аут процесса ping";.*?\}')
+        self.assertIn('reader.join(200);', SOURCE)
         self.assertIn('reader.join(1000);', SOURCE)
     def test_reply_parsed_after_reader_completion(self):
         self.assertLess(SOURCE.index('reader.join(1000);'), SOURCE.index('exitCode==0?parseIcmpReply(output,probeAddress):null'))
