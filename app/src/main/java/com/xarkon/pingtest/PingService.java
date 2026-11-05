@@ -294,6 +294,10 @@ public final class PingService extends Service {
                     else if(outputReadFailed.get())error="Не удалось полностью прочитать вывод ping";
                     else if(output.contains("Operation not permitted")||output.contains("Permission denied"))error="Пинг запрещён системой";
                     else if(output.contains("unknown option")||output.contains("invalid option")||output.contains("usage:"))error="Параметры ping не поддерживаются прошивкой";
+                    else if(output.contains("unknown host")||output.contains("Unknown host")||
+                             output.contains("bad address")||output.contains("Name or service not known")||
+                             output.contains("Temporary failure in name resolution")||
+                             output.contains("nodename nor servname provided"))error="Не удалось разрешить адрес узла";
                     else if(output.contains("Network is unreachable")||
                             output.contains("No route to host")||
                             output.contains("Network is down")||
@@ -314,6 +318,7 @@ public final class PingService extends Service {
                 error.startsWith("Параметры ping")||
                 error.startsWith("Ошибка запуска ping")||
                 error.startsWith("Сеть недоступна")||
+                 error.startsWith("Не удалось разрешить адрес узла")||
                 error.startsWith("Локальная ошибка ping")||
                 error.startsWith("Локальный тайм-аут процесса ping")||
                 error.startsWith("Вывод ping превышает 8 КиБ")||
