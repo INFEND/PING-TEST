@@ -16,6 +16,8 @@ class TruncatedPingOutputTests(unittest.TestCase):
         self.assertIn("if(read>remaining)outputTruncated.set(true)", SOURCE)
         self.assertNotIn("if(buffer.size()>=8192)", SOURCE)
         self.assertIn('error.startsWith("Вывод ping превышает 8 КиБ")', SOURCE)
+        self.assertIn('error.startsWith("Не удалось полностью прочитать вывод ping")', SOURCE)
+        self.assertIn('else if(outputReadFailed.get())error="Не удалось полностью прочитать вывод ping"', SOURCE)
         self.assertRegex(SOURCE, r'else if\(exitCode==1\)error="Нет ответа"')
 
 if __name__ == "__main__":
