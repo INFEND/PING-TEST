@@ -265,7 +265,10 @@ public final class PingService extends Service {
                 // remaining pipe bytes before parsing the reply.
                 reader.join(1000);
                 if(reader.isAlive()){
-                    process.getInputStream().close();
+                    // The child has already exited. Some Android vendors throw
+                    // IOException when closing an exhausted process pipe.
+                    // Cleanup must not turn a valid ICMP reply into a local error.
+                    try{input.close();}catch(IOException ignored){}
                     reader.join(200);
                 }
                 String output;
