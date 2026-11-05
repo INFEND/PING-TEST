@@ -281,7 +281,10 @@ public final class PingService extends Service {
                 double[] parsed=exitCode==0?parseIcmpReply(output,probeAddress):null;
                 if(parsed!=null){rtt=parsed[0];replyTtl=(int)parsed[1];}
                 if(rtt<0){
-                    if(output.contains("Operation not permitted")||output.contains("Permission denied"))error="Пинг запрещён системой";
+                    // A vendor may emit more than the bounded 8 KiB capture.
+                    // Missing reply text in truncated diagnostics is not evidence of packet loss.
+                    if(buffer.size()>=8192)error="Вывод ping превышает 8 КиБ";
+                    else if(output.contains("Operation not permitted")||output.contains("Permission denied"))error="Пинг запрещён системой";
                     else if(output.contains("unknown option")||output.contains("invalid option")||output.contains("usage:"))error="Параметры ping не поддерживаются прошивкой";
                     else if(output.contains("Network is unreachable")||
                             output.contains("No route to host")||
@@ -305,6 +308,7 @@ public final class PingService extends Service {
                 error.startsWith("Сеть недоступна")||
                 error.startsWith("Локальная ошибка ping")||
                 error.startsWith("Локальный тайм-аут процесса ping")||
+                error.startsWith("Вывод ping превышает 8 КиБ")||
                 error.startsWith("Ответ ping не распознан")||
                 error.equals("Прервано");
         synchronized(LOCK){
