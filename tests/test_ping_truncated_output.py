@@ -12,7 +12,9 @@ class TruncatedPingOutputTests(unittest.TestCase):
         self.assertIn("while((read=input.read(temp))!=-1)", SOURCE)
 
     def test_truncation_is_local_error_not_loss(self):
-        self.assertRegex(SOURCE, r'if\(buffer\.size\(\)>=8192\)error="Вывод ping превышает 8 КиБ"')
+        self.assertIn('if(outputTruncated.get())error="Вывод ping превышает 8 КиБ"', SOURCE)
+        self.assertIn("if(read>remaining)outputTruncated.set(true)", SOURCE)
+        self.assertNotIn("if(buffer.size()>=8192)", SOURCE)
         self.assertIn('error.startsWith("Вывод ping превышает 8 КиБ")', SOURCE)
         self.assertRegex(SOURCE, r'else if\(exitCode==1\)error="Нет ответа"')
 
