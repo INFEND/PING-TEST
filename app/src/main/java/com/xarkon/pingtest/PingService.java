@@ -252,7 +252,14 @@ public final class PingService extends Service {
             reader.setDaemon(true);
             reader.start();
             boolean finished=process.waitFor(probeTimeout+3,TimeUnit.SECONDS);
-            if(!finished){process.destroyForcibly();error="Локальный тайм-аут процесса ping";}
+            if(!finished){
+                process.destroyForcibly();
+                // A timed-out process may leave its pipe reader blocked. Close the
+                // stream and join briefly so repeated probes do not leak readers.
+                try{input.close();}catch(IOException ignored){}
+                reader.join(200);
+                error="Локальный тайм-аут процесса ping";
+            }
             else{
                 // Process has exited; wait briefly for the reader to consume
                 // remaining pipe bytes before parsing the reply.
