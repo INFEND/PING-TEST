@@ -624,10 +624,21 @@ public final class MainActivity extends Activity {
             int sent=o.optInt("sent");int lost=o.optInt("lost");
             int completed=o.has("done")?o.optInt("done"):sent;
             double percent=completed==0?0:100.0*Math.max(0,completed-o.optInt("ok"))/completed;
-            TextView lossLabel=Ui.text(this,"Потери "+fmt(percent)+"%"+
-                (o.optString("vpnInfo").contains("включён")?"  ·  с VPN":"  ·  без VPN"),11,
-                sent==0?QualityColors.UNKNOWN:QualityColors.loss(percent),false);
-            card.addView(lossLabel,Ui.margins(-1,-2,0,5));
+            // Independent chips keep loss severity separate from the UID route status.
+            LinearLayout badges=Ui.horizontal(this);
+            TextView lossLabel=Ui.chip(this,"ПОТЕРИ  "+(completed==0?"—":fmt(percent)+"%"),false);
+            lossLabel.setTextColor(completed==0?QualityColors.UNKNOWN:QualityColors.loss(percent));
+            badges.addView(lossLabel);
+            String vpnInfo=o.optString("vpnInfo","");
+            String routeLabel=vpnInfo.contains("не определён")?"МАРШРУТ НЕИЗВЕСТЕН":
+                vpnInfo.contains("включён")?"ЧЕРЕЗ VPN":
+                vpnInfo.isEmpty()?"МАРШРУТ НЕИЗВЕСТЕН":"БЕЗ VPN";
+            TextView routeBadge=Ui.chip(this,routeLabel,false);
+            routeBadge.setTextColor(vpnInfo.contains("включён")?QualityColors.RED:Ui.muted());
+            LinearLayout.LayoutParams badgeGap=new LinearLayout.LayoutParams(-2,-2);
+            badgeGap.leftMargin=Ui.dp(8);
+            badges.addView(routeBadge,badgeGap);
+            card.addView(badges,Ui.margins(-1,-2,0,5));
             card.addView(Ui.text(this,date(o.optLong("time"))+"   ·   "+o.optInt("ok")+" / "+sent,11,Ui.muted(),false));
             card.setOnClickListener(v->historyDetails(o));card.setOnLongClickListener(v->{new AlertDialog.Builder(this).setTitle("Удалить сеанс?")
                 .setNegativeButton("Отмена",null).setPositiveButton("Удалить",(d,w)->{HistoryStore.remove(this,o.optLong("id"));showTab(1);}).show();return true;});
