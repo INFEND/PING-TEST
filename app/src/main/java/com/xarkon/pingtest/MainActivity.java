@@ -148,7 +148,7 @@ public final class MainActivity extends Activity {
     private void refreshStatus(){refreshStatus(PingService.snapshot());}
     private void refreshStatus(PingService.Snapshot s){if(status==null)return;
         boolean running=s.active;
-        status.setText(running?"● LIVE":!s.error.isEmpty()?"● ERROR":"● ГОТОВ");
+        status.setText(running?"● РАБОТАЕТ":!s.error.isEmpty()?"● ОШИБКА":"● ГОТОВ");
         status.setTextColor(running?OK:!s.error.isEmpty()?BAD:Ui.muted());
     }
     private void navigation(){
@@ -273,9 +273,9 @@ public final class MainActivity extends Activity {
         if(s.version==renderedVersion&&s.id==seenSession)return;
         boolean sameSession=s.id==seenSession;renderedVersion=s.version;seenSession=s.id;
         ip.setText(s.active||s.done>0?(
-            s.vpnInfo.contains("включён")?"● Через VPN · маршрут этого сеанса":
-            s.vpnInfo.contains("не определён")?"● Маршрут не определён":
-            "● Прямой маршрут · VPN не используется"):
+            s.vpnInfo.contains("включён")?"● ЧЕРЕЗ VPN":
+            s.vpnInfo.contains("не определён")?"● МАРШРУТ НЕИЗВЕСТЕН":
+            "● БЕЗ VPN"):
             VpnGuard.statusText(this));
         last.update(s.last,false,sameSession);avg.update(s.avg(),false,sameSession);
         boolean unusable=s.ok==0&&s.lost==0&&!s.error.isEmpty();
@@ -297,8 +297,7 @@ public final class MainActivity extends Activity {
         renderRecentEvents(s.events);
         if(!s.error.isEmpty()){info.setText("ВНИМАНИЕ  •  "+s.error+"  ›");info.setTextColor(BAD);}
         else if(!s.warning.isEmpty()){info.setText("МАРШРУТ  •  "+s.warning+"  ›");info.setTextColor(BAD);}
-        else if(!s.route.isEmpty()){info.setText((s.vpnInfo.contains("включён")?"VPN АКТИВЕН  •  ":"СЕТЬ  •  ")+s.route+
-            (s.skipped>0?"  ·  пропусков "+s.skipped:""));info.setTextColor(s.vpnInfo.contains("включён")?BAD:Ui.muted());}
+        else if(s.skipped>0){info.setText("Пропущено проверок: "+s.skipped);info.setTextColor(Ui.muted());}
         else{info.setText("Ответ может зависеть от ограничений ICMP на сервере.");info.setTextColor(Ui.muted());}
     }
     private String fmt(double value){return String.format(Locale.US,"%.1f",value);}
