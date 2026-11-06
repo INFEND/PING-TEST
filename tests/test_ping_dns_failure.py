@@ -3,14 +3,19 @@ from pathlib import Path
 SOURCE = Path("app/src/main/java/com/xarkon/pingtest/PingService.java").read_text(encoding="utf-8")
 
 def test_dns_failures_are_local_errors():
+    assert 'else if(isDnsFailure(output))error="Не удалось разрешить адрес узла";' in SOURCE
+    assert 'String text=output.toLowerCase(Locale.ROOT);' in SOURCE
     for message in (
-        "unknown host", "Unknown host", "bad address",
-        "Name or service not known",
-        "Temporary failure in name resolution",
-        "nodename nor servname provided",
+        "unknown host", "bad address", "name or service not known",
+        "temporary failure in name resolution", "nodename nor servname provided",
+        "name resolution failed",
     ):
-        assert 'output.contains("' + message + '")' in SOURCE
-    assert 'error="Не удалось разрешить адрес узла"' in SOURCE
+        assert 'text.contains("' + message + '")' in SOURCE
+
+def test_network_failures_are_local_errors():
+    assert 'else if(isNetworkFailure(output))error="Сеть недоступна";' in SOURCE
+    for message in ("network is unreachable", "no route to host", "network is down"):
+        assert 'text.contains("' + message + '")' in SOURCE
 
 def test_dns_failure_excluded_from_packet_loss():
     assert 'error.startsWith("Не удалось разрешить адрес узла")' in SOURCE
