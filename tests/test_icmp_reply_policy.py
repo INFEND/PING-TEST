@@ -16,9 +16,13 @@ class IcmpReplyPolicyTests(unittest.TestCase):
         self.assertIn("Pattern.quote(expectedAddress)", SERVICE)
         self.assertIn("Matcher lines=reply.matcher(output);", SERVICE)
     def test_local_route_failures_not_counted_as_packet_loss(self):
-        self.assertIn('output.contains("Network is unreachable")', SERVICE)
-        self.assertIn('output.contains("No route to host")', SERVICE)
-        self.assertIn('output.contains("Network is down")', SERVICE)
+        # Check the case-insensitive helper, not obsolete inline contains() calls.
+        helper = SERVICE.split("private static boolean isNetworkFailure(String output){", 1)[1].split("\\n    }", 1)[0]
+        self.assertIn("output.toLowerCase(Locale.ROOT)", helper)
+        for diagnostic in ("network is unreachable", "no route to host", "network is down"):
+            with self.subTest(diagnostic=diagnostic):
+                self.assertIn('text.contains("'+diagnostic+'")', helper)
+        self.assertIn("else if(isNetworkFailure(output))error=\"Сеть недоступна\";", SERVICE)
         self.assertIn('error.startsWith("Сеть недоступна")', SERVICE)
         self.assertIn('error.equals("Прервано")', SERVICE)
         self.assertIn('else if(fatal){live.error=error;', SERVICE)
