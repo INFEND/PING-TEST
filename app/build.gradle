@@ -1,4 +1,4 @@
-// v1.5.63: Russian monitoring labels and concise VPN route indicator.
+// v1.5.64: compact, independently colored history loss and VPN chips.
 plugins { id 'com.android.application' }
 
 android {
@@ -8,8 +8,8 @@ android {
         applicationId 'com.xarkon.pingtest'
         minSdk 26
         targetSdk 35
-        versionCode 71
-        versionName '1.5.63'
+        versionCode 72
+        versionName '1.5.64'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
