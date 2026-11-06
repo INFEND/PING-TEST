@@ -48,12 +48,12 @@ public final class PingService extends Service {
         public long version=0;
         public int planned, sent, done, ok, lost, skipped, ttl=-1, limit=0, intervalMs=200, chartLimit=150;
         public double last=-1, min=Double.MAX_VALUE, max=0, total, jitterTotal, previous=-1;
-        public int jitterCount;
+        public int jitterCount, timed;
         public long started;
         public final ArrayList<Float> chart = new ArrayList<>();
         public final ArrayList<String> log = new ArrayList<>();
         public final ArrayList<ProbeEvent> events = new ArrayList<>();
-        public double avg(){return ok==0?-1:total/ok;}
+        public double avg(){return timed==0?-1:total/timed;}
         /** Loss is measured only among completed ICMP outcomes (reply or timeout).
          * Pending probes, skipped dispatches and fatal local execution errors are
          * not evidence of packet loss. */
@@ -64,7 +64,7 @@ public final class PingService extends Service {
             s.active=active;s.id=id;s.host=host;s.label=label;s.ip=ip;s.error=error;s.method=method;s.route=route;s.vpnInfo=vpnInfo;s.warning=warning;s.port=port;s.version=version;s.planned=planned;
             s.sent=sent;s.done=done;s.ok=ok;s.lost=lost;s.skipped=skipped;s.ttl=ttl;
             s.limit=limit;s.intervalMs=intervalMs;s.chartLimit=chartLimit;s.last=last;s.min=min;s.max=max;
-            s.total=total;s.previous=previous;s.jitterTotal=jitterTotal;s.jitterCount=jitterCount;
+            s.total=total;s.previous=previous;s.jitterTotal=jitterTotal;s.jitterCount=jitterCount;s.timed=timed;
             s.started=started;s.chart.addAll(chart);s.log.addAll(log);s.events.addAll(events);return s;
         }
     }
@@ -210,7 +210,9 @@ public final class PingService extends Service {
             if(!time.find())continue;
             try{
                 double latency=Double.parseDouble(time.group(1).replace(',','.'));
-                if(!Double.isFinite(latency)||latency<0)continue;
+                // A bounded RTT is not an exact numeric measurement.
+                if(line.charAt(time.start()+4)=='<')latency=-2;
+                if(!Double.isFinite(latency)||(latency<0&&latency!=-2))continue;
                 Matcher ttl=TTL.matcher(line);
                 int replyTtl=-1;
                 if(ttl.find())try{replyTtl=Integer.parseInt(ttl.group(1));}
@@ -315,7 +317,7 @@ public final class PingService extends Service {
                 int exitCode=process.exitValue();
                 double[] parsed=exitCode==0?parseIcmpReply(output,probeAddress):null;
                 if(parsed!=null){rtt=parsed[0];replyTtl=(int)parsed[1];}
-                if(rtt<0){
+                if(rtt<0&&rtt!=-2){
                     // A vendor may emit more than the bounded 8 KiB capture.
                     // Missing reply text in truncated diagnostics is not evidence of packet loss.
                     if(outputTruncated.get())error="Вывод ping превышает 8 КиБ";
@@ -355,10 +357,12 @@ public final class PingService extends Service {
         synchronized(LOCK){
             if(!live.active||runId!=capturedRun)return;
             live.done++;
-            if(rtt>=0){
-                live.ok++;live.last=rtt;live.total+=rtt;live.min=Math.min(live.min,rtt);live.max=Math.max(live.max,rtt);
+            if(rtt>=0||rtt==-2){
+                live.ok++;
+                if(rtt>=0){live.timed++;live.last=rtt;live.total+=rtt;live.min=Math.min(live.min,rtt);live.max=Math.max(live.max,rtt);
                 if(live.previous>=0){live.jitterTotal+=Math.abs(rtt-live.previous);live.jitterCount++;}
-                live.previous=rtt;if(replyTtl>=0)live.ttl=replyTtl;
+                live.previous=rtt;}else{live.last=-1;live.previous=-1;}
+                if(replyTtl>=0)live.ttl=replyTtl;
                 addProbeEvent(seq,rtt,probeBytes,"");
             }else if(fatal){live.error=error;addProbeEvent(seq,-1,probeBytes,error);}
             else{live.lost++;addProbeEvent(seq,-1,probeBytes,error);}
@@ -379,7 +383,7 @@ public final class PingService extends Service {
     }
     private static void addProbeEvent(int seq,double rtt,int payloadBytes,String error){
         String line=String.format(Locale.US,"#%d  |  %s  |  %d",seq,
-            rtt>=0?String.format(Locale.US,"%.1f мс",rtt):error,payloadBytes);
+            rtt==-2?"<1 мс":rtt>=0?String.format(Locale.US,"%.1f мс",rtt):error,payloadBytes);
         if(live.log.size()>=600)live.log.remove(0);
         live.log.add(line);
         addEvent(new ProbeEvent(seq,rtt,payloadBytes,error));
@@ -413,7 +417,7 @@ public final class PingService extends Service {
                 s.vpnInfo.contains("не определён")?"Маршрут неизвестен":"Без VPN";
         String content=s.sent==0?"Подключение к узлу…":
                 String.format(Locale.US,"%s · %d/%d завершено · %s · потери %.1f%%",
-                    routeLabel,s.ok,classified,s.ok>0?String.format(Locale.US,"%.0f мс",s.avg()):"ожидание",s.lossPct());
+                    routeLabel,s.ok,classified,s.timed>0?String.format(Locale.US,"%.0f мс",s.avg()):s.ok>0?"<1 мс":"ожидание",s.lossPct());
         if(!s.error.isEmpty())content=s.error;
         else if(!s.warning.isEmpty())content=s.warning;
         if(s.ok==0&&s.lost>0&&s.error.isEmpty())content="0 / "+(s.ok+s.lost)+" • ответов нет";
@@ -431,7 +435,7 @@ public final class PingService extends Service {
         if(AppPrefs.bool(this,"notifications",true)&&AppPrefs.bool(this,"notify_details",true)){
             StringBuilder sb=new StringBuilder(content);
             if(!s.log.isEmpty())sb.append("\n").append(s.log.get(s.log.size()-1));
-            if(s.ok>0)sb.append(String.format(Locale.US,"\nmin / avg / max: %.1f / %.1f / %.1f мс",s.min,s.avg(),s.max));
+            if(s.timed>0)sb.append(String.format(Locale.US,"\nmin / avg / max: %.1f / %.1f / %.1f мс",s.min,s.avg(),s.max));
             b.setStyle(new Notification.BigTextStyle().bigText(sb.toString()));
         }
         return b.build();
@@ -466,7 +470,7 @@ public final class PingService extends Service {
             j.put("id",s.id);j.put("host",s.host);j.put("ip",s.ip);j.put("time",s.started);
             j.put("method",s.method);j.put("label",s.label);j.put("vpnInfo",s.vpnInfo);j.put("route",s.route);j.put("port",s.port);j.put("warning",s.warning);j.put("error",s.error);
             j.put("sent",s.sent);j.put("done",s.done);j.put("ok",s.ok);j.put("lost",s.lost);j.put("skipped",s.skipped);
-            j.put("min",s.ok>0?s.min:-1);j.put("avg",s.avg());j.put("max",s.ok>0?s.max:-1);
+            j.put("min",s.timed>0?s.min:-1);j.put("avg",s.avg());j.put("max",s.timed>0?s.max:-1);j.put("timed",s.timed);
             j.put("jitter",s.jitter());j.put("ttl",s.ttl);j.put("finished",finished);
             j.put("log",String.join("\n",s.log));
             HistoryStore.upsert(this,j);

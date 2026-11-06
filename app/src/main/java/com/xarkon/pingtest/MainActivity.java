@@ -287,12 +287,12 @@ public final class MainActivity extends Activity {
             qualityState.setTextColor(ms<0?(s.lost>0?QualityColors.RED:QualityColors.UNKNOWN):QualityColors.rtt(ms));
         }
         sendText.update(s.ok,s.sent,sameSession);
-        bestText.setText("MIN  "+(s.ok==0?"—":fmt(s.min)));
-        bestText.setTextColor(s.ok==0?QualityColors.UNKNOWN:QualityColors.rtt(s.min));
-        maxText.setText("MAX  "+(s.ok==0?"—":fmt(s.max)));
-        maxText.setTextColor(s.ok==0?QualityColors.UNKNOWN:QualityColors.rtt(s.max));
-        jitterText.setText("JITTER  "+(s.ok<2?"—":fmt(s.jitter())));
-        jitterText.setTextColor(s.ok<2?QualityColors.UNKNOWN:QualityColors.jitter(s.jitter()));
+        bestText.setText("MIN  "+(s.timed==0?"—":fmt(s.min)));
+        bestText.setTextColor(s.timed==0?QualityColors.UNKNOWN:QualityColors.rtt(s.min));
+        maxText.setText("MAX  "+(s.timed==0?"—":fmt(s.max)));
+        maxText.setTextColor(s.timed==0?QualityColors.UNKNOWN:QualityColors.rtt(s.max));
+        jitterText.setText("JITTER  "+(s.jitterCount==0?"—":fmt(s.jitter())));
+        jitterText.setTextColor(s.jitterCount==0?QualityColors.UNKNOWN:QualityColors.jitter(s.jitter()));
         graph.setData(s.chart,AppPrefs.accent(this),Ui.surface(this));
         renderRecentEvents(s.events);
         if(!s.error.isEmpty()){info.setText("ВНИМАНИЕ  •  "+s.error+"  ›");info.setTextColor(BAD);}
@@ -514,11 +514,11 @@ public final class MainActivity extends Activity {
         number.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
         number.setSingleLine(true);
         row.addView(number,new LinearLayout.LayoutParams(0,-2,1f));
-        boolean answered=e.latencyMs>=0;
-        String middle=answered?String.format(Locale.US,"%.1f мс",e.latencyMs):
+        boolean answered=e.latencyMs>=0||e.latencyMs==-2;
+        String middle=e.latencyMs==-2?"<1 мс":answered?String.format(Locale.US,"%.1f мс",e.latencyMs):
             (e.message.isEmpty()?"Нет ответа":e.message);
         TextView response=Ui.text(this,middle,answered?13:11,
-            answered?QualityColors.rtt(e.latencyMs):
+            e.latencyMs==-2?QualityColors.UNKNOWN:answered?QualityColors.rtt(e.latencyMs):
             e.message.toLowerCase(Locale.ROOT).contains("пропуск")?QualityColors.YELLOW:QualityColors.RED,true);
         response.setGravity(Gravity.CENTER);
         response.setSingleLine(true);
