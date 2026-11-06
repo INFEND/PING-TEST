@@ -221,6 +221,24 @@ public final class PingService extends Service {
         return null;
     }
 
+    /** Native ping diagnostics vary in capitalization across Android vendors.
+     * These local failures must not be counted as ICMP packet loss. */
+    private static boolean isDnsFailure(String output){
+        String text=output.toLowerCase(Locale.ROOT);
+        return text.contains("unknown host")||text.contains("bad address")||
+            text.contains("name or service not known")||
+            text.contains("temporary failure in name resolution")||
+            text.contains("nodename nor servname provided")||
+            text.contains("name resolution failed");
+    }
+    private static boolean isNetworkFailure(String output){
+        String text=output.toLowerCase(Locale.ROOT);
+        return text.contains("network is unreachable")||
+            text.contains("no route to host")||
+            text.contains("network is down")||
+            text.contains("connect: invalid argument");
+    }
+
     private void probe(int seq,long capturedRun,String probeAddress,int probeBytes,int probeTtl,int probeTimeout){
         double rtt=-1;int replyTtl=-1;String error="";
         java.lang.Process process=null;
@@ -292,16 +310,15 @@ public final class PingService extends Service {
                     // Missing reply text in truncated diagnostics is not evidence of packet loss.
                     if(outputTruncated.get())error="Вывод ping превышает 8 КиБ";
                     else if(outputReadFailed.get())error="Не удалось полностью прочитать вывод ping";
-                    else if(output.contains("Operation not permitted")||output.contains("Permission denied"))error="Пинг запрещён системой";
-                    else if(output.contains("unknown option")||output.contains("invalid option")||output.contains("usage:"))error="Параметры ping не поддерживаются прошивкой";
-                    else if(output.contains("unknown host")||output.contains("Unknown host")||
-                             output.contains("bad address")||output.contains("Name or service not known")||
-                             output.contains("Temporary failure in name resolution")||
-                             output.contains("nodename nor servname provided"))error="Не удалось разрешить адрес узла";
-                    else if(output.contains("Network is unreachable")||
-                            output.contains("No route to host")||
-                            output.contains("Network is down")||
-                            output.contains("connect: Invalid argument"))error="Сеть недоступна";
+                    else if(output.toLowerCase(Locale.ROOT).contains("operation not permitted")||
+                            output.toLowerCase(Locale.ROOT).contains("permission denied"))
+                        error="Пинг запрещён системой";
+                    else if(output.toLowerCase(Locale.ROOT).contains("unknown option")||
+                            output.toLowerCase(Locale.ROOT).contains("invalid option")||
+                            output.toLowerCase(Locale.ROOT).contains("usage:"))
+                        error="Параметры ping не поддерживаются прошивкой";
+                    else if(isDnsFailure(output))error="Не удалось разрешить адрес узла";
+                    else if(isNetworkFailure(output))error="Сеть недоступна";
                     // Only exit 1 means no ICMP reply. Any other nonzero code,
                     // including negative vendor-specific codes, is a local failure.
                     else if(exitCode==1)error="Нет ответа";
