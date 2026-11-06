@@ -11,10 +11,11 @@ class VpnRouteCopyTest(unittest.TestCase):
         self.assertNotIn("getAllNetworks(", SOURCE)
 
     def test_route_labels_are_indicators_not_packet_proof(self):
-        self.assertIn("VPN · сеть по умолчанию для приложения", SOURCE)
-        self.assertIn("Без VPN · сеть по умолчанию для приложения", SOURCE)
+        self.assertIn('case VPN: return "● ЧЕРЕЗ VPN";', SOURCE)
+        self.assertIn('case DIRECT: return "● БЕЗ VPN";', SOURCE)
         self.assertNotIn("реальный маршрут приложения", SOURCE)
         self.assertNotIn("VPN не используется", SOURCE)
+        self.assertIn('default: return "● МАРШРУТ НЕИЗВЕСТЕН";', SOURCE)
         self.assertIn("return Route.UNKNOWN;", SOURCE)
 
 if __name__ == "__main__":
