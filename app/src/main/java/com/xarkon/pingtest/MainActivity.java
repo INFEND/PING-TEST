@@ -557,7 +557,7 @@ public final class MainActivity extends Activity {
         top.addView(icon(R.drawable.ic_log,AppPrefs.accent(this),Ui.dp(25)),Ui.margins(27,27,0,0));
         TextView heading=Ui.text(this,"Живой журнал",18,Ui.fg(),true);heading.setPadding(Ui.dp(10),0,0,0);
         top.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
-        TextView live=Ui.chip(this,"● LIVE",false);live.setTextColor(QualityColors.GREEN);top.addView(live);
+        TextView live=Ui.chip(this,"● В ЭФИРЕ",false);live.setTextColor(QualityColors.GREEN);top.addView(live);
         frame.addView(top,Ui.margins(-1,-2,0,13));
         frame.addView(eventHeader(),Ui.margins(-1,-2,0,5));
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);journalScroll=scroll;
