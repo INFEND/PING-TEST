@@ -10,7 +10,7 @@ class PendingDisplayTests(unittest.TestCase):
         self.assertIn("ms<0?(s.lost>0?QualityColors.RED:QualityColors.UNKNOWN)", ACTIVITY)
         self.assertNotIn("ms<0?(s.sent>0?QualityColors.RED:QualityColors.UNKNOWN)", ACTIVITY)
     def test_notification_does_not_show_negative_latency(self):
-        self.assertIn('s.ok>0?String.format(Locale.US,"%.0f мс",s.avg()):"ожидание"', SERVICE)
+        self.assertIn('s.timed>0?String.format(Locale.US,"%.0f мс",s.avg()):s.ok>0?"<1 мс":"ожидание"', SERVICE)
         self.assertNotIn('routeLabel,s.ok,classified,s.avg(),s.lossPct()', SERVICE)
 
 if __name__ == "__main__":
