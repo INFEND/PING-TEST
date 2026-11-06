@@ -234,6 +234,7 @@ public final class PingService extends Service {
     private static boolean isNetworkFailure(String output){
         String text=output.toLowerCase(Locale.ROOT);
         return text.contains("network is unreachable")||
+            text.contains("network unreachable")||
             text.contains("no route to host")||
             text.contains("network is down")||
             text.contains("connect: invalid argument");
