@@ -14,7 +14,7 @@ def test_dns_failures_are_local_errors():
 
 def test_network_failures_are_local_errors():
     assert 'else if(isNetworkFailure(output))error="Сеть недоступна";' in SOURCE
-    for message in ("network is unreachable", "no route to host", "network is down", "network unreachable", "host is unreachable", "host unreachable"):
+    for message in ("network is unreachable", "no route to host", "network is down", "network unreachable", "host is unreachable", "host unreachable", "address family not supported by protocol", "protocol not supported", "socket: permission denied"):
         assert 'text.contains("' + message + '")' in SOURCE
 
 def test_dns_failure_excluded_from_packet_loss():

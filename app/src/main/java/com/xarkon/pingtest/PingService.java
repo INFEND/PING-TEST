@@ -239,7 +239,10 @@ public final class PingService extends Service {
             text.contains("host is unreachable")||
             text.contains("host unreachable")||
             text.contains("network is down")||
-            text.contains("connect: invalid argument");
+            text.contains("connect: invalid argument")||
+            text.contains("address family not supported by protocol")||
+            text.contains("protocol not supported")||
+            text.contains("socket: permission denied");
     }
 
     private void probe(int seq,long capturedRun,String probeAddress,int probeBytes,int probeTtl,int probeTimeout){
