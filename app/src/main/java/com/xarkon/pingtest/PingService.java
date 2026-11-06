@@ -238,6 +238,10 @@ public final class PingService extends Service {
             text.contains("no route to host")||
             text.contains("host is unreachable")||
             text.contains("host unreachable")||
+            text.contains("destination host unreachable")||
+            text.contains("destination net unreachable")||
+            text.contains("destination network unreachable")||
+            text.contains("destination unreachable")||
             text.contains("network is down")||
             text.contains("connect: invalid argument")||
             text.contains("address family not supported by protocol")||
