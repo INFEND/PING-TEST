@@ -5,13 +5,10 @@ on:
     branches: [main]
     paths:
       - 'PING_TEST_SOURCE.zip'
-      - 'app/**'
-      - 'scripts/**'
-      - 'tests/**'
-      - 'release_notes/**'
-      - 'build.gradle'
-      - 'settings.gradle'
-      - 'gradle.properties'
+      # Release only on an explicit version bump, workflow change, or first import.
+      # Broad app/tests/notes globs launched multiple runs for one version,
+      # causing the second run to reject the already-published tag.
+      - 'app/build.gradle'
       - '.github/workflows/ota-release.yml'
 
 permissions:
