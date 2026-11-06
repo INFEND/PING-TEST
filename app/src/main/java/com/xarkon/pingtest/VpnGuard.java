@@ -48,9 +48,9 @@ public final class VpnGuard {
 
     public static String statusText(Context context){
         switch(route(context)){
-            case VPN: return "● Через VPN · реальный маршрут приложения";
-            case DIRECT: return "● Прямое соединение · VPN не используется";
-            default: return "● Не удалось определить маршрут сети";
+            case VPN: return "● VPN · сеть по умолчанию для приложения";
+            case DIRECT: return "● Без VPN · сеть по умолчанию для приложения";
+            default: return "● Не удалось определить сеть по умолчанию";
         }
     }
 }
