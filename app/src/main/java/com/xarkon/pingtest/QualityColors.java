@@ -11,7 +11,7 @@ public final class QualityColors {
     public static final int UNKNOWN=0xFF778592;
 
     public static int blend(int a,int b,float fraction){
-        float t=Math.max(0f,Math.min(1f,fraction));
+        float t=Float.isNaN(fraction)?0f:Math.max(0f,Math.min(1f,fraction));
         return Color.argb(255,
             (int)(Color.red(a)+(Color.red(b)-Color.red(a))*t),
             (int)(Color.green(a)+(Color.green(b)-Color.green(a))*t),
@@ -27,7 +27,7 @@ public final class QualityColors {
     public static int loss(double percent){return map(percent,0.1,4,18);}
     public static int jitter(double ms){return map(ms,4,15,50);}
     public static int success(int received,int sent){
-        if(sent<=0)return UNKNOWN;
+        if(sent<=0||received<0||received>sent)return UNKNOWN;
         return loss(100.0*(sent-received)/sent);
     }
 }
