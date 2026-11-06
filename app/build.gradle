@@ -1,3 +1,4 @@
+// v1.5.63: Russian monitoring labels and concise VPN route indicator.
 plugins { id 'com.android.application' }
 
 android {
