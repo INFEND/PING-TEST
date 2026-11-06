@@ -115,7 +115,7 @@ public final class PingService extends Service {
             live.started=System.currentTimeMillis();live.limit=limit;live.intervalMs=interval;live.chartLimit=chartLimit;
             live.method="ICMP";
             live.vpnInfo=vpn?"VPN включён":selectedRoute==VpnGuard.Route.DIRECT?
-                "Прямой маршрут PING TEST":"Маршрут не определён";
+                "Сеть приложения без VPN":"Сеть по умолчанию не определена";
             addLog("PING TEST • " + live.label + " | "+interval+" мс"+(vpn?" | VPN":""));
         }
         stopping=false; address="";
@@ -126,8 +126,8 @@ public final class PingService extends Service {
         clock=Executors.newSingleThreadScheduledExecutor(r->{Thread t=new Thread(r,"PingClock");t.setDaemon(true);return t;});
         new Thread(()->{
             try{
-                String route=vpn?"Через VPN":selectedRoute==VpnGuard.Route.DIRECT?
-                    "Прямой маршрут (PING TEST вне VPN)":"Не определён";
+                String route=vpn?"Сеть по умолчанию: VPN":selectedRoute==VpnGuard.Route.DIRECT?
+                    "Сеть по умолчанию: без VPN":"Не определён";
                 ConnectivityManager connectivity=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
                 Network activeNetwork=connectivity==null?null:connectivity.getActiveNetwork();
                 // Resolve on this UID's active network, including split-tunnel VPN exclusions.
@@ -138,7 +138,7 @@ public final class PingService extends Service {
                 final String resolvedAddress=preferV4(resolved).getHostAddress();
                 synchronized(LOCK){if(!live.active || runId!=expectedRun || stopping)return;
                     live.ip=resolvedAddress;live.route=route;live.method="ICMP";
-                    addLog("Маршрут: "+route);live.version++;}
+                    addLog("Сеть приложения: "+route);live.version++;}
                 signalUpdate();
                 ScheduledExecutorService c=clock;
                 if(c!=null&&!c.isShutdown()&&!stopping)c.scheduleAtFixedRate(()->tick(expectedRun),0,interval,TimeUnit.MILLISECONDS);
@@ -165,7 +165,7 @@ public final class PingService extends Service {
         VpnGuard.Route currentRoute=VpnGuard.route(this);
         if(currentRoute!=VpnGuard.Route.UNKNOWN&&sessionRoute!=VpnGuard.Route.UNKNOWN
             &&currentRoute!=sessionRoute){
-            finishRun(scheduledRun,"Маршрут VPN изменился. Начните новую проверку.");return;
+            finishRun(scheduledRun,"Сеть по умолчанию изменилась. Начните новую проверку.");return;
         }
         final int seq;final long capturedRun=scheduledRun;
         final String probeAddress;
@@ -414,7 +414,7 @@ public final class PingService extends Service {
         PendingIntent stopP=PendingIntent.getService(this,1,stop,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         int classified=s.ok+s.lost;
         String routeLabel=s.vpnInfo.contains("включён")?"С VPN":
-                s.vpnInfo.contains("не определён")?"Маршрут неизвестен":"Без VPN";
+                s.vpnInfo.contains("не определена")?"Сеть неизвестна":"Без VPN";
         String content=s.sent==0?"Подключение к узлу…":
                 String.format(Locale.US,"%s · %d/%d завершено · %s · потери %.1f%%",
                     routeLabel,s.ok,classified,s.timed>0?String.format(Locale.US,"%.0f мс",s.avg()):s.ok>0?"<1 мс":"ожидание",s.lossPct());
