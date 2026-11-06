@@ -646,20 +646,86 @@ public final class MainActivity extends Activity {
         }
     }
     private void historyDetails(JSONObject obj){
-        int sent=obj.optInt("sent"),bad=obj.optInt("lost");String method=obj.optString("method","ICMP");
-        String out=obj.optString("label",TargetStore.friendly(this,obj.optString("host")))+"\n"+date(obj.optLong("time"))+"\n"+
-          "Сеть: "+(obj.optString("vpnInfo").contains("включён")?"с VPN":"без VPN")+"\n"+
-          "Отправлено: "+sent+"\nОтветов: "+obj.optInt("ok")+"\n"+
-          (method.startsWith("TCP")?"Сбои: ":"Потери: ")+bad+" ("+fmt((obj.has("done")?obj.optInt("done"):sent)==0?0:
-            100.0*Math.max(0,(obj.has("done")?obj.optInt("done"):sent)-obj.optInt("ok"))/
-            (obj.has("done")?obj.optInt("done"):sent))+"%)\n"+
-          "Пропущено: "+obj.optInt("skipped")+"\nMIN / AVG / MAX: "+fmt(obj.optDouble("min"))+" / "+fmt(obj.optDouble("avg"))+" / "+fmt(obj.optDouble("max"))+" мс\n"+
-          "Jitter: "+fmt(obj.optDouble("jitter"))+" мс\n"+obj.optString("warning")+"\n"+obj.optString("error")+"\n\n"+obj.optString("log");
-        ScrollView view=new ScrollView(this);view.setPadding(Ui.dp(16),Ui.dp(15),Ui.dp(16),Ui.dp(8));
-        TextView body=Ui.mono(this,out,12,Ui.fg());body.setTextIsSelectable(true);view.addView(body);
-        new AlertDialog.Builder(this).setTitle("Отчёт • "+obj.optString("label",TargetStore.friendly(this,obj.optString("host"))))
-            .setView(view).setNeutralButton("Копировать",(d,w)->copy(out))
-            .setPositiveButton("Поделиться",(d,w)->share(out)).setNegativeButton("Закрыть",null).show();
+        int sent=obj.optInt("sent"),ok=obj.optInt("ok");
+        int completed=Math.max(0,obj.has("done")?obj.optInt("done"):sent);
+        int lost=Math.max(0,completed-ok);
+        String method=obj.optString("method","ICMP");
+        String label=obj.optString("label",TargetStore.friendly(this,obj.optString("host")));
+        String rawLog=obj.optString("log","");
+        String route=obj.optString("vpnInfo","");
+        String routeLabel=route.contains("включён")?"ЧЕРЕЗ VPN":
+            route.contains("без VPN")||route.contains("не используется")?"БЕЗ VPN":"МАРШРУТ НЕИЗВЕСТЕН";
+        String out=label+"\n"+date(obj.optLong("time"))+"\n"+
+            "Маршрут: "+routeLabel+"\nОтправлено: "+sent+"\nОтветов: "+ok+
+            "\n"+(method.startsWith("TCP")?"Сбоев: ":"Потерь: ")+lost+
+            "\nПропущено: "+obj.optInt("skipped")+"\n"+rawLog;
+        Dialog dialog=new Dialog(this);
+        LinearLayout frame=Ui.vertical(this);
+        frame.setPadding(Ui.dp(16),Ui.dp(15),Ui.dp(16),Ui.dp(14));
+        frame.setBackground(Ui.shape(Ui.surface(this),Ui.dp(20),Ui.border()));
+        LinearLayout title=Ui.horizontal(this);
+        title.addView(icon(R.drawable.ic_log,AppPrefs.accent(this),Ui.dp(25)),Ui.margins(27,27,0,0));
+        TextView heading=Ui.text(this,"Отчёт проверки",18,Ui.fg(),true);
+        heading.setPadding(Ui.dp(10),0,0,0);
+        title.addView(heading,new LinearLayout.LayoutParams(0,-2,1));
+        frame.addView(title,Ui.margins(-1,-2,0,12));
+        frame.addView(Ui.text(this,label,15,Ui.fg(),true));
+        frame.addView(Ui.text(this,date(obj.optLong("time"))+"  ·  "+routeLabel,11,Ui.muted(),false),
+            Ui.margins(-1,-2,0,12));
+        LinearLayout stats=Ui.panel(this);
+        stats.addView(Ui.text(this,"ОТВЕТЫ  "+ok+" / "+sent+"    ·    "+
+            (method.startsWith("TCP")?"СБОИ  ":"ПОТЕРИ  ")+
+            (completed>0?fmt(100.0*lost/completed)+"%":"—"),13,Ui.fg(),true));
+        if(obj.optInt("timed")>0){
+            stats.addView(Ui.text(this,"MIN  "+fmt(obj.optDouble("min"))+
+                "   AVG  "+fmt(obj.optDouble("avg"))+
+                "   MAX  "+fmt(obj.optDouble("max"))+" мс",11,Ui.muted(),false),
+                Ui.margins(-1,-2,0,5));
+        }
+        frame.addView(stats,Ui.margins(-1,-2,0,12));
+        frame.addView(Ui.text(this,"СОХРАНЁННЫЙ ЖУРНАЛ",12,AppPrefs.accent(this),true),
+            Ui.margins(-1,-2,0,7));
+        frame.addView(eventHeader(),Ui.margins(-1,-2,0,5));
+        ScrollView scroll=new ScrollView(this);
+        LinearLayout rows=Ui.vertical(this);
+        rows.setPadding(Ui.dp(6),Ui.dp(4),Ui.dp(6),Ui.dp(6));
+        // Historical entries contain a text log, not structured ProbeEvent objects.
+        // Never invent packet numbers, sizes or RTT values from free-form text.
+        if(rawLog.trim().isEmpty()){
+            rows.addView(Ui.text(this,"События этого сеанса не сохранены.",12,Ui.muted(),false));
+        }else{
+            for(String line:rawLog.split("\\r?\\n")){
+                if(line.trim().isEmpty())continue;
+                TextView entry=Ui.mono(this,line,11,Ui.fg());
+                entry.setTextIsSelectable(true);
+                entry.setPadding(Ui.dp(5),Ui.dp(7),Ui.dp(5),Ui.dp(7));
+                rows.addView(entry);
+            }
+        }
+        scroll.addView(rows);
+        scroll.setBackground(Ui.shape(Ui.bg(this),Ui.dp(11),Ui.border()));
+        frame.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        addSpace(frame,12);
+        LinearLayout actions=Ui.horizontal(this);
+        TextView copyButton=Ui.button(this,"КОПИРОВАТЬ",false);
+        TextView shareButton=Ui.button(this,"ПОДЕЛИТЬСЯ",false);
+        TextView closeButton=Ui.button(this,"ЗАКРЫТЬ",true);
+        actions.addView(copyButton,new LinearLayout.LayoutParams(0,Ui.dp(44),1));
+        LinearLayout.LayoutParams gap=new LinearLayout.LayoutParams(0,Ui.dp(44),1);
+        gap.leftMargin=Ui.dp(6);actions.addView(shareButton,gap);
+        LinearLayout.LayoutParams gap2=new LinearLayout.LayoutParams(0,Ui.dp(44),1);
+        gap2.leftMargin=Ui.dp(6);actions.addView(closeButton,gap2);
+        frame.addView(actions);
+        copyButton.setOnClickListener(v->copy(out));
+        shareButton.setOnClickListener(v->share(out));
+        closeButton.setOnClickListener(v->dialog.dismiss());
+        dialog.setContentView(frame);dialog.show();
+        Window w=dialog.getWindow();
+        if(w!=null){
+            w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            w.setLayout(getResources().getDisplayMetrics().widthPixels-Ui.dp(24),
+                (int)(getResources().getDisplayMetrics().heightPixels*.80f));
+        }
     }
     private String date(long time){return new SimpleDateFormat("dd.MM.yyyy  HH:mm:ss",Locale.getDefault()).format(new Date(time));}
     // QR LINK SETTINGS · genuine section architecture and animation timings
