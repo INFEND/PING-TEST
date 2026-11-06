@@ -472,6 +472,17 @@ public final class PingService extends Service {
             j.put("sent",s.sent);j.put("done",s.done);j.put("ok",s.ok);j.put("lost",s.lost);j.put("skipped",s.skipped);
             j.put("min",s.timed>0?s.min:-1);j.put("avg",s.avg());j.put("max",s.timed>0?s.max:-1);j.put("timed",s.timed);
             j.put("jitter",s.jitter());j.put("ttl",s.ttl);j.put("finished",finished);
+            // Preserve measured events verbatim; legacy text logs remain readable.
+            org.json.JSONArray recorded=new org.json.JSONArray();
+            for(ProbeEvent e:s.events){
+                org.json.JSONObject item=new org.json.JSONObject();
+                item.put("number",e.number);
+                item.put("latencyMs",e.latencyMs);
+                item.put("payloadBytes",e.payloadBytes);
+                item.put("message",e.message);
+                recorded.put(item);
+            }
+            j.put("events",recorded);
             j.put("log",String.join("\n",s.log));
             HistoryStore.upsert(this,j);
         }catch(Exception e){Log.e("PING TEST","History save",e);}

@@ -685,15 +685,26 @@ public final class MainActivity extends Activity {
         frame.addView(stats,Ui.margins(-1,-2,0,12));
         frame.addView(Ui.text(this,"СОХРАНЁННЫЙ ЖУРНАЛ",12,AppPrefs.accent(this),true),
             Ui.margins(-1,-2,0,7));
-        frame.addView(eventHeader(),Ui.margins(-1,-2,0,5));
+        org.json.JSONArray savedEvents=obj.optJSONArray("events");
+        boolean structured=savedEvents!=null&&savedEvents.length()>0;
+        if(structured)frame.addView(eventHeader(),Ui.margins(-1,-2,0,5));
         ScrollView scroll=new ScrollView(this);
         LinearLayout rows=Ui.vertical(this);
         rows.setPadding(Ui.dp(6),Ui.dp(4),Ui.dp(6),Ui.dp(6));
-        // Historical entries contain a text log, not structured ProbeEvent objects.
-        // Never invent packet numbers, sizes or RTT values from free-form text.
-        if(rawLog.trim().isEmpty()){
+        if(structured){
+            for(int i=0;i<savedEvents.length();i++){
+                JSONObject e=savedEvents.optJSONObject(i);
+                if(e==null)continue;
+                int number=e.optInt("number",0);
+                double latency=e.optDouble("latencyMs",-1);
+                int payload=e.optInt("payloadBytes",0);
+                String message=e.optString("message","");
+                rows.addView(eventRow(new PingService.ProbeEvent(number,latency,payload,message)));
+            }
+        }else if(rawLog.trim().isEmpty()){
             rows.addView(Ui.text(this,"События этого сеанса не сохранены.",12,Ui.muted(),false));
         }else{
+            rows.addView(Ui.text(this,"ТЕКСТОВЫЙ ЖУРНАЛ РАННЕЙ ВЕРСИИ",11,Ui.muted(),true));
             for(String line:rawLog.split("\\r?\\n")){
                 if(line.trim().isEmpty())continue;
                 TextView entry=Ui.mono(this,line,11,Ui.fg());
