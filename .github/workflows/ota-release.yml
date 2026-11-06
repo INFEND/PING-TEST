@@ -78,6 +78,18 @@ jobs:
       - name: Run VPN routing regression checks
         run: python3 -m unittest discover -s tests -p 'test_*.py' -v
 
+      - name: Validate cumulative release notes before build
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+          index = json.loads(pathlib.Path('release_notes/versions.json').read_text(encoding='utf-8'))
+          for version in index:
+              path = pathlib.Path('release_notes') / f'v{version}.txt'
+              if not path.is_file() or not any(line.strip().startswith(('[+] ', '[-] ', '[=] ', '[–] ', '• ')) for line in path.read_text(encoding='utf-8').splitlines()):
+                  sys.exit(f'::error::Missing visible cumulative OTA notes for {version}')
+          print('Validated OTA changelog versions:', len(index))
+          PY
+
       - name: Compile Android release
         run: gradle --no-daemon :app:assembleRelease
 
