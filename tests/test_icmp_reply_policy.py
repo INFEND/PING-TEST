@@ -17,7 +17,7 @@ class IcmpReplyPolicyTests(unittest.TestCase):
         self.assertIn("Matcher lines=reply.matcher(output);", SERVICE)
     def test_local_route_failures_not_counted_as_packet_loss(self):
         # Check the case-insensitive helper, not obsolete inline contains() calls.
-        helper = SERVICE.split("private static boolean isNetworkFailure(String output){", 1)[1].split("\\n    }", 1)[0]
+        helper = SERVICE.split("private static boolean isNetworkFailure(String output){", 1)[1].split("    }", 1)[0]
         self.assertIn("output.toLowerCase(Locale.ROOT)", helper)
         for diagnostic in ("network is unreachable", "no route to host", "network is down"):
             with self.subTest(diagnostic=diagnostic):
