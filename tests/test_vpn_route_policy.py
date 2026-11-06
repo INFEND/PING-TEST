@@ -16,7 +16,7 @@ class SplitTunnelPolicyTests(unittest.TestCase):
         self.assertIn("return Route.DIRECT;",VPN)
     def test_unknown_not_labeled_as_vpn(self):
         self.assertIn("return Route.UNKNOWN;",VPN)
-        self.assertIn("Не удалось определить сеть по умолчанию",VPN)
+        self.assertIn('default: return "● МАРШРУТ НЕИЗВЕСТЕН";',VPN)
         self.assertNotIn("Не удалось определить маршрут сети",VPN)
     def test_app_and_service_agree_on_routing(self):
         self.assertIn("VpnGuard.statusText(this)",MAIN)
