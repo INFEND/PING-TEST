@@ -11,5 +11,8 @@ class DnsRace(unittest.TestCase):
         self.assertIn("if(!live.active || runId!=expectedRun || stopping)return;",s)
     def test_uid_network(self):
         self.assertIn("activeNetwork.getAllByName(chosen)",s)
-        self.assertNotIn("getAllNetworks()",s)
+        # Inspect executable statements, not comments explaining why this API is forbidden.
+        code="\n".join(line for line in s.splitlines() if not line.strip().startswith("//"))
+        self.assertNotIn(".getAllNetworks(",code)
+        self.assertIn("getActiveNetwork()",code)
 if __name__=="__main__": unittest.main()
