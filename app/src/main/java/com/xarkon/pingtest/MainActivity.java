@@ -709,9 +709,11 @@ public final class MainActivity extends Activity {
         stats.addView(Ui.text(this,"ОТВЕТЫ  "+ok+" / "+sent+"    ·    "+
             (method.startsWith("TCP")?"СБОИ  ":"ПОТЕРИ  ")+
             (completed>0?fmt(100.0*lost/completed)+"%":"—"),13,Ui.fg(),true));
-        if(obj.optInt("timed")>0){
-            stats.addView(Ui.text(this,"МИН  "+fmt(obj.optDouble("min"))+
-                "   СРЕД  "+fmt(obj.optDouble("avg"))+
+        if(obj.optInt("timed")>0 && obj.has("min") && obj.has("avg") && obj.has("max")){
+            // Every RTT is independently labelled; never render missing historical
+            // measurements as 0 ms or attach the unit only to the last value.
+            stats.addView(Ui.text(this,"МИН  "+fmt(obj.optDouble("min"))+" мс"+
+                "   СРЕД  "+fmt(obj.optDouble("avg"))+" мс"+
                 "   МАКС  "+fmt(obj.optDouble("max"))+" мс",11,Ui.muted(),false),
                 Ui.margins(-1,-2,0,5));
         }
