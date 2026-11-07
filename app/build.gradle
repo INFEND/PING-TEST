@@ -1,4 +1,4 @@
-// v1.5.64: compact, independently colored history loss and VPN chips.
+// v1.5.76: network-specific Russian diagnostics; compact history loss and VPN chips.
 plugins { id 'com.android.application' }
 
 android {
