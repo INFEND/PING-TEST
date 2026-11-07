@@ -42,6 +42,20 @@ public final class HistoryStore {
         }
         save(c, result);
     }
+    /** Delete one selected session, including legacy records with no ID.
+     *  Verify the selected row against current storage before changing anything.
+     *  A concurrently appended session shifts indices; never delete a different row.
+     */
+    public static synchronized boolean removeEntry(Context c,int index,JSONObject expected) {
+        if(expected==null || index<0)return false;
+        JSONArray old=all(c);
+        JSONObject current=old.optJSONObject(index);
+        if(current==null || !current.toString().equals(expected.toString()))return false;
+        JSONArray updated=new JSONArray();
+        for(int i=0;i<old.length();i++)if(i!=index)updated.put(old.opt(i));
+        save(c,updated);
+        return true;
+    }
     public static synchronized void clear(Context c) { save(c, new JSONArray()); }
     private static void save(Context c, JSONArray a) {
         c.getSharedPreferences("history", Context.MODE_PRIVATE).edit().putString(KEY, a.toString()).apply();

@@ -632,6 +632,7 @@ public final class MainActivity extends Activity {
         JSONArray data=HistoryStore.all(this);if(data.length()==0){LinearLayout empty=Ui.panel(this);empty.addView(Ui.text(this,"Нет сохранённых проверок",16,Ui.fg(),true));
             empty.addView(Ui.text(this,"Запустите мониторинг, и история появится здесь.",12,Ui.muted(),false));page.addView(empty);return;}
         for(int i=0;i<data.length();i++){JSONObject o=data.optJSONObject(i);if(o==null)continue;
+            final int historyIndex=i;
             LinearLayout card=Ui.panel(this);LinearLayout r=Ui.horizontal(this);
             r.addView(Ui.text(this,o.optString("label",TargetStore.friendly(this,o.optString("host","—"))),17,Ui.fg(),true),new LinearLayout.LayoutParams(0,-2,1));
             boolean good=o.optInt("ok")>0;TextView m=Ui.text(this,good?fmt(o.optDouble("avg"))+" мс":"НЕТ ОТВЕТА",12,
@@ -655,7 +656,8 @@ public final class MainActivity extends Activity {
             card.addView(badges,Ui.margins(-1,-2,0,5));
             card.addView(Ui.text(this,date(o.optLong("time"))+"   ·   "+o.optInt("ok")+" / "+sent,11,Ui.muted(),false));
             card.setOnClickListener(v->historyDetails(o));card.setOnLongClickListener(v->{new AlertDialog.Builder(this).setTitle("Удалить сеанс?")
-                .setNegativeButton("Отмена",null).setPositiveButton("Удалить",(d,w)->{HistoryStore.remove(this,o.optLong("id"));showTab(1);}).show();return true;});
+                .setNegativeButton("Отмена",null).setPositiveButton("Удалить",(d,w)->{if(HistoryStore.removeEntry(this,historyIndex,o))showTab(1);
+                     else toast("Запись изменилась. Обновите историю.");}).show();return true;});
             page.addView(card,Ui.margins(-1,-2,0,9));
         }
     }
