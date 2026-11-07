@@ -10,8 +10,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 class ReleaseVersionConsistency(unittest.TestCase):
     def test_gradle_version_is_indexed(self):
         gradle = (ROOT / "app/build.gradle").read_text(encoding="utf-8")
-        version = re.search(r"\bversionName\s+['\"]([^'\"]+)['\"]", gradle)
-        code = re.search(r"\bversionCode\s+(\d+)", gradle)
+        version = re.search(r"(?m)^\s*versionName\s+['\"]([^'\"]+)['\"]\s*$", gradle)
+        code = re.search(r"(?m)^\s*versionCode\s+(\d+)\s*$", gradle)
         self.assertIsNotNone(version, "Missing versionName")
         self.assertIsNotNone(code, "Missing versionCode")
         index = json.loads((ROOT / "release_notes/versions.json").read_text(encoding="utf-8"))
