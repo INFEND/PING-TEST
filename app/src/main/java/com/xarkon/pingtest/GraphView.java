@@ -13,6 +13,7 @@ import java.util.Locale;
 public final class GraphView extends View {
     private float[] points=new float[0];
     private float progress=1f, previous=-1;
+    private float displayMax=Float.NaN,scaleStart=Float.NaN,scaleTarget=Float.NaN;
     private int accent=0xff55dfcb,bg=0xff0b0b0d;
     private ValueAnimator animator;
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -22,13 +23,32 @@ public final class GraphView extends View {
         if(Arrays.equals(points,fresh)&&accent==color&&bg==background)return;
         boolean newSample=points.length>0&&fresh.length>0&&(fresh.length!=points.length||fresh[fresh.length-1]!=points[points.length-1]);
         previous=points.length>0?points[points.length-1]:-1;
+        // Keep the Y axis stable across incoming packets. A sudden high RTT
+        // must still fit, while downward rescaling waits for a meaningful drop.
+        float required=axisMaximum(fresh);
+        if(Float.isNaN(displayMax)){
+            displayMax=required;scaleStart=required;scaleTarget=required;
+        }else{
+            scaleStart=displayMax;
+            scaleTarget=required>displayMax?required:
+                required<displayMax*.70f?required:displayMax;
+        }
         points=fresh;accent=color;bg=background;
         if(animator!=null)animator.cancel();
-        if(newSample&&AppPrefs.bool(getContext(),"motion",true)&&fresh.length>0){
-            progress=0f;animator=ValueAnimator.ofFloat(0f,1f);animator.setDuration(180);
+        boolean animate=AppPrefs.bool(getContext(),"motion",true)&&fresh.length>0
+            &&(newSample||Math.abs(scaleTarget-scaleStart)>0.01f);
+        if(animate){
+            progress=0f;animator=ValueAnimator.ofFloat(0f,1f);animator.setDuration(220);
             animator.setInterpolator(new DecelerateInterpolator(1.2f));
-            animator.addUpdateListener(v->{progress=(Float)v.getAnimatedValue();invalidate();});animator.start();
-        }else progress=1f;
+            animator.addUpdateListener(v->{
+                progress=(Float)v.getAnimatedValue();
+                displayMax=scaleStart+(scaleTarget-scaleStart)*progress;
+                invalidate();
+            });
+            animator.start();
+        }else{
+            progress=1f;displayMax=scaleTarget;
+        }
         invalidate();
     }
     @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);
@@ -37,18 +57,27 @@ public final class GraphView extends View {
             animated=Arrays.copyOf(points,points.length);
             animated[points.length-1]=previous+(points[points.length-1]-previous)*progress;
         }
-        render(canvas,getWidth(),getHeight(),animated,accent,bg);
+        renderWithScale(canvas,getWidth(),getHeight(),animated,accent,bg,displayMax);
     }
+    /** Fixed autoscale for exports and screenshots, independent of live animations. */
     public static void render(Canvas c,int w,int h,float[] v,int accent,int background){
+        renderWithScale(c,w,h,v,accent,background,axisMaximum(v));
+    }
+    private static float axisMaximum(float[] v){
+        float highest=30f;
+        for(float r:v)if(Float.isFinite(r)&&r>highest)highest=r;
+        double power=Math.pow(10,Math.floor(Math.log10(highest/3.0)));
+        float step=(float)(Math.ceil((highest*1.14/3.0)/power)*power);
+        return Math.max(3f,step*3f);
+    }
+    private static void renderWithScale(Canvas c,int w,int h,float[] v,int accent,int background,float scale){
         if(w<=0||h<=0)return;
         Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
         c.drawColor(background);
         float density=h/145f;
         float left=38*density,right=w-13*density,top=15*density,bottom=h-23*density;
         if(right<=left+5||bottom<=top+5)return;
-        float max=30;for(float r:v)if(r>max)max=r;
-        double power=Math.pow(10,Math.floor(Math.log10(max/3.0)));
-        float step=(float)(Math.ceil((max*1.14/3.0)/power)*power);max=Math.max(3,step*3);
+        float max=Float.isFinite(scale)&&scale>0?scale:axisMaximum(v);
         p.setStrokeWidth(Math.max(1f,.65f*density));
         for(int k=0;k<=3;k++){
             float y=top+(bottom-top)*k/3f;
