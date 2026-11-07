@@ -13,5 +13,11 @@ class NetworkIdentityRegression(unittest.TestCase):
         self.assertIn("initialNetwork==null || !initialNetwork.equals(currentNetwork)", SOURCE)
         self.assertIn('finishRun(scheduledRun,"Сеть приложения изменилась.', SOURCE)
 
+    def test_inflight_probe_discards_outcome_on_network_switch(self):
+        self.assertIn("Network resultNetwork=resultConnectivity==null?null:resultConnectivity.getActiveNetwork();", SOURCE)
+        self.assertIn("!expectedNetwork.equals(resultNetwork)", SOURCE)
+        self.assertIn('finishRun(capturedRun,"Сеть приложения изменилась во время ICMP.', SOURCE)
+        self.assertLess(SOURCE.index("!expectedNetwork.equals(resultNetwork)"), SOURCE.index("// Local routing/permission/command failures are not ICMP packet loss."))
+
 if __name__ == "__main__":
     unittest.main()
