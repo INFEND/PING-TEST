@@ -30,7 +30,7 @@ public final class HistoryStore {
         updated.put(entry);
         for (int i = 0; i < old.length() && updated.length() < limit(c); i++) {
             JSONObject x = old.optJSONObject(i);
-            if (x != null && x.optLong("id", -2) != id) updated.put(x);
+            if (x != null && (id < 0 || !x.has("id") || x.optLong("id", -2) != id)) updated.put(x);
         }
         save(c, updated);
     }
@@ -38,7 +38,7 @@ public final class HistoryStore {
         JSONArray old = all(c), result = new JSONArray();
         for (int i = 0; i < old.length(); i++) {
             JSONObject x = old.optJSONObject(i);
-            if (x != null && x.optLong("id", -2) != id) result.put(x);
+            if (x != null && (id < 0 || !x.has("id") || x.optLong("id", -2) != id)) result.put(x);
         }
         save(c, result);
     }
