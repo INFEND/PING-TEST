@@ -13,7 +13,7 @@ class ReaderCompletionPolicy(unittest.TestCase):
         self.assertLess(branch.index('reader.join(200)'), branch.index('if(reader.isAlive())outputReadFailed.set(true);'))
 
     def test_incomplete_read_is_local_failure(self):
-        self.assertLess(SOURCE.index('else if(outputReadFailed.get())'), SOURCE.index('else if(exitCode==1)error="Нет ответа";'))
+        self.assertLess(SOURCE.index('else if(outputReadFailed.get())'), SOURCE.index('else if(exitCode==1&&isConfirmedNoReply(output))error="Нет ответа";'))
         self.assertIn('error.startsWith("Не удалось полностью прочитать вывод ping")', SOURCE)
 
 if __name__ == "__main__":

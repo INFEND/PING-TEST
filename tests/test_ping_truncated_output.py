@@ -18,7 +18,8 @@ class TruncatedPingOutputTests(unittest.TestCase):
         self.assertIn('error.startsWith("Вывод ping превышает 8 КиБ")', SOURCE)
         self.assertIn('error.startsWith("Не удалось полностью прочитать вывод ping")', SOURCE)
         self.assertIn('else if(outputReadFailed.get())error="Не удалось полностью прочитать вывод ping"', SOURCE)
-        self.assertRegex(SOURCE, r'else if\(exitCode==1\)error="Нет ответа"')
+        self.assertIn('else if(exitCode==1&&isConfirmedNoReply(output))error="Нет ответа";', SOURCE)
+        self.assertIn('else if(exitCode==1)error="Неоднозначный результат ping (код 1)"', SOURCE)
 
 if __name__ == "__main__":
     unittest.main()

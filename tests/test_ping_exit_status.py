@@ -18,7 +18,8 @@ class PingExitStatusRegression(unittest.TestCase):
         self.assertRegex(SOURCE, r"else\{live\.lost\+\+")
 
     def test_ping_exit_one_still_allows_timeout_loss(self):
-        self.assertIn('else if(exitCode==1)error="Нет ответа";', SOURCE)
+        self.assertIn('else if(exitCode==1&&isConfirmedNoReply(output))error="Нет ответа";', SOURCE)
+        self.assertIn('else if(exitCode==1)error="Неоднозначный результат ping (код 1)";', SOURCE)
         self.assertNotIn('else error="Нет ответа";', SOURCE)
 
 if __name__ == "__main__":
