@@ -1,4 +1,4 @@
-// v1.5.78: export persisted history events accurately; final OTA metadata and unittest checks ready.
+// v1.5.79: avoid falsely labeling unknown per-app routes as direct.
 plugins { id 'com.android.application' }
 
 android {
@@ -8,8 +8,8 @@ android {
         applicationId 'com.xarkon.pingtest'
         minSdk 26
         targetSdk 35
-        versionCode 86
-        versionName '1.5.78'
+        versionCode 87
+        versionName '1.5.79'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
