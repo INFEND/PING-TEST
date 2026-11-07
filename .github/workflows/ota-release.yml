@@ -5,10 +5,9 @@ on:
     branches: [main]
     paths:
       - 'PING_TEST_SOURCE.zip'
-      # Release only on an explicit version bump, workflow change, or first import.
-      # Broad app/tests/notes globs launched multiple runs for one version,
-      # causing the second run to reject the already-published tag.
-      - 'app/build.gradle'
+      # Release notes are committed LAST, after source, version index and tests.
+      # Trigger on that final commit, not the earlier build.gradle bump.
+      - 'release_notes/v*.txt'
       - '.github/workflows/ota-release.yml'
 
 permissions:
