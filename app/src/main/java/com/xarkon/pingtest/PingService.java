@@ -269,6 +269,21 @@ public final class PingService extends Service {
             text.contains("socket: permission denied");
     }
 
+    /** Exit code 1 alone is not proof of ICMP loss: vendor ping builds may
+     * also return 1 for unsupported flags, malformed output or local errors.
+     * Only an explicit no-reply outcome can increment the loss counter. */
+    private static boolean isConfirmedNoReply(String output){
+        if(output==null||output.isEmpty())return false;
+        String text=output.toLowerCase(Locale.ROOT);
+        if(text.contains("request timeout")||text.contains("timed out waiting for reply"))
+            return true;
+        // Require a zero-received summary, not an arbitrary "100%" token.
+        Pattern zeroReceived=Pattern.compile(
+            "(?m)^\\s*\\d+\\s+packets? transmitted,\\s*0\\s+(?:packets? )?received\\b",
+            Pattern.CASE_INSENSITIVE);
+        return zeroReceived.matcher(output).find();
+    }
+
     private void probe(int seq,long capturedRun,String probeAddress,int probeBytes,int probeTtl,int probeTimeout){
         double rtt=-1;int replyTtl=-1;String error="";
         java.lang.Process process=null;
@@ -351,7 +366,8 @@ public final class PingService extends Service {
                     else if(isNetworkFailure(output))error="Сеть недоступна";
                     // Only exit 1 means no ICMP reply. Any other nonzero code,
                     // including negative vendor-specific codes, is a local failure.
-                    else if(exitCode==1)error="Нет ответа";
+                    else if(exitCode==1&&isConfirmedNoReply(output))error="Нет ответа";
+                    else if(exitCode==1)error="Неоднозначный результат ping (код 1)";
                     else if(exitCode==0)error="Ответ ping не распознан";
                     else error="Локальная ошибка ping (код "+exitCode+")";
                 }
@@ -389,6 +405,7 @@ public final class PingService extends Service {
                 error.startsWith("Вывод ping превышает 8 КиБ")||
                 error.startsWith("Не удалось полностью прочитать вывод ping")||
                 error.startsWith("Ответ ping не распознан")||
+                error.startsWith("Неоднозначный результат ping")||
                 error.equals("Прервано");
         synchronized(LOCK){
             if(!live.active||runId!=capturedRun)return;
