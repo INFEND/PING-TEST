@@ -8,7 +8,8 @@ class ReleaseTriggerRegression(unittest.TestCase):
     def test_version_gated_push_paths(self):
         workflow = (ROOT / ".github/workflows/ota-release.yml").read_text(encoding="utf-8")
         push_section = workflow.split("  push:", 1)[1].split("\npermissions:", 1)[0]
-        self.assertIn("'app/build.gradle'", push_section)
+        self.assertIn("'release_notes/v*.txt'", push_section)
+        self.assertNotIn("'app/build.gradle'", push_section)
         self.assertIn("'PING_TEST_SOURCE.zip'", push_section)
         self.assertIn("'.github/workflows/ota-release.yml'", push_section)
         for broad in ("'app/**'", "'tests/**'", "'release_notes/**'", "'scripts/**'"):

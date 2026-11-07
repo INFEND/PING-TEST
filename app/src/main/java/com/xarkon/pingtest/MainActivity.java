@@ -50,7 +50,7 @@ public final class MainActivity extends Activity {
     private boolean vpnConsent=false,vpnDialogVisible=false;
     private long lastVpnUiCheck=0;
     private ScrollView scroller;
-    private TextView status,go,ip,info,bestText,maxText,jitterText,unit,qualityState;
+    private TextView status,go,ip,info,bestText,middleText,maxText,unit,qualityState;
     private ReplyMetric sendText;
     private LinearLayout recentEvents,journalRows;
     private Metric last,avg,failed;
@@ -207,9 +207,9 @@ public final class MainActivity extends Activity {
         display.addView(metrics);
         addSpace(display,11);
         LinearLayout detail=Ui.horizontal(this);
-        bestText=Ui.text(this,"МИН —",12,Ui.muted(),true);bestText.setGravity(Gravity.START);detail.addView(bestText,new LinearLayout.LayoutParams(0,-2,1));
-        jitterText=Ui.text(this,"СРЕД —",12,Ui.muted(),true);jitterText.setGravity(Gravity.CENTER);detail.addView(jitterText,new LinearLayout.LayoutParams(0,-2,1));
-        maxText=Ui.text(this,"МАКС —",12,Ui.muted(),true);maxText.setGravity(Gravity.END);detail.addView(maxText,new LinearLayout.LayoutParams(0,-2,1));
+        bestText=detailStat(detail,"МИН");
+        middleText=detailStat(detail,"СРЕД");
+        maxText=detailStat(detail,"МАКС");
         display.addView(detail);
         page.addView(display,Ui.margins(-1,-2,0,11));
         LinearLayout chartCard=Ui.panel(this);chartCard.setPadding(Ui.dp(13),Ui.dp(11),Ui.dp(13),Ui.dp(11));
@@ -250,15 +250,33 @@ public final class MainActivity extends Activity {
         col.addView(value,Ui.margins(-1,29,0,0));
         parent.addView(col,new LinearLayout.LayoutParams(0,-2,1));
     }
+    /** Three aligned metric cells: labels remain legible in dark, AMOLED and light themes. */
+    private TextView detailStat(LinearLayout parent,String label){
+        LinearLayout cell=Ui.vertical(this);
+        cell.setGravity(Gravity.CENTER);
+        cell.setPadding(Ui.dp(4),Ui.dp(9),Ui.dp(4),Ui.dp(9));
+        cell.setBackground(Ui.shape(Ui.soft(this),Ui.dp(12),Ui.border()));
+        TextView title=Ui.text(this,label,10,Ui.muted(),true);
+        title.setGravity(Gravity.CENTER);title.setLetterSpacing(.07f);cell.addView(title);
+        TextView value=Ui.text(this,"—",15,QualityColors.UNKNOWN,true);
+        value.setGravity(Gravity.CENTER);value.setFontFeatureSettings("tnum");
+        cell.addView(value,Ui.margins(-1,-2,5,0));
+        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
+        if(parent.getChildCount()<2)lp.rightMargin=Ui.dp(7);
+        parent.addView(cell,lp);
+        return value;
+    }
     private void refreshPing(){if(tab!=0||go==null)return;
         PingService.Snapshot s=PingService.snapshot();refreshStatus(s);
         if(!s.active && !s.host.equals(TargetStore.selected(this).host)){
             ip.setText(VpnGuard.statusText(this));
             last.update(-1,false,false);avg.update(-1,false,false);failed.update(-1,false,false);
             if(qualityState!=null){qualityState.setText("ОЖИДАНИЕ");qualityState.setTextColor(QualityColors.UNKNOWN);}
-            sendText.update(0,0,false);bestText.setText("МИН —");maxText.setText("МАКС —");jitterText.setText("СРЕД —");
-            bestText.setTextColor(QualityColors.UNKNOWN);maxText.setTextColor(QualityColors.UNKNOWN);
-            jitterText.setTextColor(QualityColors.UNKNOWN);
+            sendText.update(0,0,false);
+            bestText.setText("—");middleText.setText("—");maxText.setText("—");
+            bestText.setTextColor(QualityColors.UNKNOWN);
+            middleText.setTextColor(QualityColors.UNKNOWN);
+            maxText.setTextColor(QualityColors.UNKNOWN);
             graph.setData(new ArrayList<Float>(),AppPrefs.accent(this),Ui.surface(this));
             if(recentEvents!=null){recentEvents.removeAllViews();
                 recentEvents.addView(Ui.text(this,"Выбран другой узел. Начните проверку.",12,Ui.muted(),false));}
@@ -285,12 +303,12 @@ public final class MainActivity extends Activity {
             qualityState.setTextColor(ms<0?(s.lost>0?QualityColors.RED:QualityColors.UNKNOWN):QualityColors.rtt(ms));
         }
         sendText.update(s.ok,s.sent,sameSession);
-        bestText.setText("МИН "+(s.timed==0?"—":fmt(s.min)));
+        bestText.setText(s.timed==0?"—":fmt(s.min)+" мс");
         bestText.setTextColor(s.timed==0?QualityColors.UNKNOWN:QualityColors.rtt(s.min));
-        maxText.setText("МАКС "+(s.timed==0?"—":fmt(s.max)));
+        middleText.setText(s.timed==0?"—":fmt(s.avg())+" мс");
+        middleText.setTextColor(s.timed==0?QualityColors.UNKNOWN:QualityColors.rtt(s.avg()));
+        maxText.setText(s.timed==0?"—":fmt(s.max)+" мс");
         maxText.setTextColor(s.timed==0?QualityColors.UNKNOWN:QualityColors.rtt(s.max));
-        jitterText.setText("СРЕД "+(s.timed==0?"—":fmt(s.avg())));
-        jitterText.setTextColor(s.timed==0?QualityColors.UNKNOWN:QualityColors.rtt(s.avg()));
         graph.setData(s.chart,AppPrefs.accent(this),Ui.surface(this));
         renderRecentEvents(s.events);
         if(!s.error.isEmpty()){info.setText("ВНИМАНИЕ  •  "+s.error+"  ›");info.setTextColor(BAD);}

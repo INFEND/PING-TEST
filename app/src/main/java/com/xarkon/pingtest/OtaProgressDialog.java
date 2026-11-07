@@ -86,15 +86,13 @@ public final class OtaProgressDialog {
     }
     public OtaProgressDialog(Activity a){
         activity=a;
-        android.content.SharedPreferences p=a.getSharedPreferences("settings",0);
-        String theme=p.getString("theme_mode","dark");
-        boolean light="light".equals(theme),amoled="amoled".equals(theme);
-        accent=p.getInt("accent",0xff55dfcb);
+        Ui.applyPalette(a);
+        accent=AppPrefs.accent(a);
         panel=Ui.surface(a);
         foreground=Ui.fg();
         muted=Ui.muted();
         int stroke=Ui.border();
-        animate=p.getBoolean("motion",true);
+        animate=AppPrefs.bool(a,"motion",true);
         dialog=new Dialog(a);dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         LinearLayout root=new LinearLayout(a);root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(22),dp(22),dp(22),dp(19));root.setBackground(shape(panel,stroke,25));
@@ -141,7 +139,7 @@ public final class OtaProgressDialog {
         secondary.setPadding(dp(16),dp(14),dp(16),dp(14));
         secondary.setOnClickListener(v->dismiss());
         actions.addView(secondary);
-        primary=text("ПОВТОРИТЬ",12,Color.BLACK,true);primary.setGravity(Gravity.CENTER);
+        primary=text("ПОВТОРИТЬ",12,Ui.onAccent(a),true);primary.setGravity(Gravity.CENTER);
         primary.setBackground(shape(accent,0,13));primary.setPadding(dp(16),dp(13),dp(16),dp(13));
         LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-2,-2);ap.leftMargin=dp(8);
         actions.addView(primary,ap);primary.setVisibility(View.GONE);

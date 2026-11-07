@@ -14,8 +14,10 @@ class RussianMonitorStatusTests(unittest.TestCase):
             self.assertNotIn(label, SOURCE)
 
     def test_route_indicator_is_compact(self):
-        self.assertIn('● БЕЗ VPN', SOURCE)
-        self.assertIn('● ЧЕРЕЗ VPN', SOURCE)
+        self.assertIn('routeLabelFromInfo(s.vpnInfo)', SOURCE)
+        self.assertIn('return "БЕЗ VPN";', SOURCE)
+        self.assertIn('return "ЧЕРЕЗ VPN";', SOURCE)
+        self.assertIn('return "МАРШРУТ НЕИЗВЕСТЕН";', SOURCE)
         self.assertNotIn('СЕТЬ  •  ', SOURCE)
 
     def test_critical_network_warnings_remain(self):
