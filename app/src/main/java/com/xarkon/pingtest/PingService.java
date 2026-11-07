@@ -143,14 +143,18 @@ public final class PingService extends Service {
                 if(!activeNetwork.equals(connectivity.getActiveNetwork()))
                     throw new UnknownHostException("Сеть приложения изменилась во время DNS");
                 final String resolvedAddress=preferV4(resolved).getHostAddress();
-                sessionNetwork=activeNetwork;
+                // Publish the network atomically for the active session only.
                 synchronized(LOCK){if(!live.active || runId!=expectedRun || stopping)return;
+                    sessionNetwork=activeNetwork;
                     live.ip=resolvedAddress;live.route=route;live.method="ICMP";
                     addLog("Сеть приложения: "+route);live.version++;}
                 signalUpdate();
-                ScheduledExecutorService c=clock;
-                if(c!=null&&!c.isShutdown()&&!stopping)c.scheduleAtFixedRate(()->tick(expectedRun),0,interval,TimeUnit.MILLISECONDS);
-                refreshNotification(true);
+                synchronized(LOCK){if(!live.active || runId!=expectedRun || stopping)return;
+                    ScheduledExecutorService c=clock;
+                    if(c!=null&&!c.isShutdown())
+                        c.scheduleAtFixedRate(()->tick(expectedRun),0,interval,TimeUnit.MILLISECONDS);
+                }
+                if(runId==expectedRun&&!stopping)refreshNotification(true);
             }catch(Exception e){
                 // DNS may complete after the user stopped this run. Never let an
                 // old resolver terminate a newer session or overwrite its error.
