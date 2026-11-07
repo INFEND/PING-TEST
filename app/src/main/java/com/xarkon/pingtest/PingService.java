@@ -355,6 +355,16 @@ public final class PingService extends Service {
         }catch(InterruptedException e){Thread.currentThread().interrupt();error="Прервано";}
         catch(Exception e){error="Ошибка запуска ping: "+e.getMessage();}
         finally{if(process!=null){activePings.remove(process);try{if(process.isAlive())process.destroyForcibly();else process.destroy();}catch(Exception ignored){}}}
+        // A route may change while the native ping process is running, after
+        // tick() checked the UID network. Never classify that result as a reply
+        // or packet loss from the original network.
+        ConnectivityManager resultConnectivity=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+        Network resultNetwork=resultConnectivity==null?null:resultConnectivity.getActiveNetwork();
+        Network expectedNetwork=sessionNetwork;
+        if(expectedNetwork==null || !expectedNetwork.equals(resultNetwork)){
+            finishRun(capturedRun,"Сеть приложения изменилась во время ICMP. Начните новую проверку.");
+            return;
+        }
         // Local routing/permission/command failures are not ICMP packet loss.
         // Only an attempted probe with no reply contributes to loss statistics.
         boolean fatal=error.startsWith("Пинг запрещён")||
