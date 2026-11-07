@@ -80,6 +80,9 @@ public final class PingService extends Service {
     private String address="";
     private int bytes=64, ttl=64, timeout=4, chartLimit=150;
     private volatile VpnGuard.Route sessionRoute=VpnGuard.Route.UNKNOWN;
+    // Network identity is stronger than the VPN/direct label: Wi-Fi to cellular
+    // can change the actual ICMP path while both routes remain DIRECT.
+    private volatile Network sessionNetwork;
     private volatile long runId=0;
     private volatile boolean stopping=false;
     private long lastNotify=0, lastGraph=0;
@@ -118,7 +121,7 @@ public final class PingService extends Service {
                 "Сеть приложения без VPN":"Сеть по умолчанию не определена";
             addLog("PING TEST • " + live.label + " | "+interval+" мс"+(vpn?" | VPN":""));
         }
-        stopping=false; address="";
+        stopping=false; address="";sessionNetwork=null;
         final long expectedRun=live.id;runId=expectedRun;
         startForeground(ONGOING,makeNotification(snapshot()));
         acquireLocks();
@@ -140,6 +143,7 @@ public final class PingService extends Service {
                 if(!activeNetwork.equals(connectivity.getActiveNetwork()))
                     throw new UnknownHostException("Сеть приложения изменилась во время DNS");
                 final String resolvedAddress=preferV4(resolved).getHostAddress();
+                sessionNetwork=activeNetwork;
                 synchronized(LOCK){if(!live.active || runId!=expectedRun || stopping)return;
                     live.ip=resolvedAddress;live.route=route;live.method="ICMP";
                     addLog("Сеть приложения: "+route);live.version++;}
@@ -166,6 +170,12 @@ public final class PingService extends Service {
     }
     private void tick(long scheduledRun){
         if(stopping || scheduledRun!=runId)return;
+        ConnectivityManager cm=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+        Network currentNetwork=cm==null?null:cm.getActiveNetwork();
+        Network initialNetwork=sessionNetwork;
+        if(initialNetwork==null || !initialNetwork.equals(currentNetwork)){
+            finishRun(scheduledRun,"Сеть приложения изменилась. Начните новую проверку.");return;
+        }
         VpnGuard.Route currentRoute=VpnGuard.route(this);
         if(currentRoute!=VpnGuard.Route.UNKNOWN&&sessionRoute!=VpnGuard.Route.UNKNOWN
             &&currentRoute!=sessionRoute){
