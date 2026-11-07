@@ -58,8 +58,8 @@ public final class UiIcon extends View {
                 circle(nativeCanvas,12,12,3.3f);break;
             }
             case "chevron":l(nativeCanvas,5,9,12,16);l(nativeCanvas,12,16,19,9);break;
-            case "moon":nativeCanvas.drawArc(3,2,21,22,65,230,false,p);l(nativeCanvas,15,3,20,3);break;
-            case "amoled":rect(nativeCanvas,3,3,18,18,4);p.setStyle(Paint.Style.FILL);circle(nativeCanvas,12,12,4);break;
+            case "moon":{Path crescent=new Path();crescent.moveTo(15,2);crescent.cubicTo(4,2,1,12,6,18);crescent.cubicTo(12,25,22,20,22,12);crescent.cubicTo(19,16,11,15,10,10);crescent.cubicTo(9,6,11,3,15,2);nativeCanvas.drawPath(crescent,p);break;}
+            case "amoled":rect(nativeCanvas,3,2,18,20,3);rect(nativeCanvas,6,5,12,13,1);p.setStyle(Paint.Style.FILL);circle(nativeCanvas,12,20,0.8f);break;
             case "sun":circle(nativeCanvas,12,12,4);for(int n=0;n<8;n++){double a=n*Math.PI/4;float dx=(float)Math.cos(a),dy=(float)Math.sin(a);l(nativeCanvas,12+dx*8,12+dy*8,12+dx*10.5f,12+dy*10.5f);}break;
             case "sparkles":l(nativeCanvas,12,2,12,19);l(nativeCanvas,5,10,19,10);l(nativeCanvas,7,5,17,15);l(nativeCanvas,17,5,7,15);circle(nativeCanvas,19,20,1.3f);break;
             case "info":circle(nativeCanvas,12,12,10);circle(nativeCanvas,12,7,1);l(nativeCanvas,12,11,12,17);break;

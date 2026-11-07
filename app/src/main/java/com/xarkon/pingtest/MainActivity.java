@@ -207,9 +207,9 @@ public final class MainActivity extends Activity {
         display.addView(metrics);
         addSpace(display,11);
         LinearLayout detail=Ui.horizontal(this);
-        bestText=Ui.text(this,"MIN —",11,Ui.muted(),false);detail.addView(bestText,new LinearLayout.LayoutParams(0,-2,1));
-        maxText=Ui.text(this,"MAX —",11,Ui.muted(),false);detail.addView(maxText,new LinearLayout.LayoutParams(0,-2,1));
-        jitterText=Ui.text(this,"JITTER —",11,Ui.muted(),false);detail.addView(jitterText);
+        bestText=Ui.text(this,"МИН —",12,Ui.muted(),true);bestText.setGravity(Gravity.START);detail.addView(bestText,new LinearLayout.LayoutParams(0,-2,1));
+        jitterText=Ui.text(this,"СРЕД —",12,Ui.muted(),true);jitterText.setGravity(Gravity.CENTER);detail.addView(jitterText,new LinearLayout.LayoutParams(0,-2,1));
+        maxText=Ui.text(this,"МАКС —",12,Ui.muted(),true);maxText.setGravity(Gravity.END);detail.addView(maxText,new LinearLayout.LayoutParams(0,-2,1));
         display.addView(detail);
         page.addView(display,Ui.margins(-1,-2,0,11));
         LinearLayout chartCard=Ui.panel(this);chartCard.setPadding(Ui.dp(13),Ui.dp(11),Ui.dp(13),Ui.dp(11));
@@ -256,7 +256,7 @@ public final class MainActivity extends Activity {
             ip.setText(VpnGuard.statusText(this));
             last.update(-1,false,false);avg.update(-1,false,false);failed.update(-1,false,false);
             if(qualityState!=null){qualityState.setText("ОЖИДАНИЕ");qualityState.setTextColor(QualityColors.UNKNOWN);}
-            sendText.update(0,0,false);bestText.setText("MIN  —");maxText.setText("MAX  —");jitterText.setText("JITTER  —");
+            sendText.update(0,0,false);bestText.setText("МИН —");maxText.setText("МАКС —");jitterText.setText("СРЕД —");
             bestText.setTextColor(QualityColors.UNKNOWN);maxText.setTextColor(QualityColors.UNKNOWN);
             jitterText.setTextColor(QualityColors.UNKNOWN);
             graph.setData(new ArrayList<Float>(),AppPrefs.accent(this),Ui.surface(this));
@@ -285,12 +285,12 @@ public final class MainActivity extends Activity {
             qualityState.setTextColor(ms<0?(s.lost>0?QualityColors.RED:QualityColors.UNKNOWN):QualityColors.rtt(ms));
         }
         sendText.update(s.ok,s.sent,sameSession);
-        bestText.setText("MIN  "+(s.timed==0?"—":fmt(s.min)));
+        bestText.setText("МИН "+(s.timed==0?"—":fmt(s.min)));
         bestText.setTextColor(s.timed==0?QualityColors.UNKNOWN:QualityColors.rtt(s.min));
-        maxText.setText("MAX  "+(s.timed==0?"—":fmt(s.max)));
+        maxText.setText("МАКС "+(s.timed==0?"—":fmt(s.max)));
         maxText.setTextColor(s.timed==0?QualityColors.UNKNOWN:QualityColors.rtt(s.max));
-        jitterText.setText("JITTER  "+(s.jitterCount==0?"—":fmt(s.jitter())));
-        jitterText.setTextColor(s.jitterCount==0?QualityColors.UNKNOWN:QualityColors.jitter(s.jitter()));
+        jitterText.setText("СРЕД "+(s.timed==0?"—":fmt(s.avg())));
+        jitterText.setTextColor(s.timed==0?QualityColors.UNKNOWN:QualityColors.rtt(s.avg()));
         graph.setData(s.chart,AppPrefs.accent(this),Ui.surface(this));
         renderRecentEvents(s.events);
         if(!s.error.isEmpty()){info.setText("ВНИМАНИЕ  •  "+s.error+"  ›");info.setTextColor(BAD);}
@@ -835,11 +835,40 @@ public final class MainActivity extends Activity {
         p.addView(Ui.text(this,"Служебное уведомление Android обязательно, пока мониторинг работает в фоне.",11,Ui.muted(),false));
     }
     private void generalSettings(LinearLayout p){
-        toggleRow(p,"Хранить историю","До 200 сеансов, включая события","history",true);
+        toggleRow(p,"Хранить историю","Сохранять сеансы и события","history",true);
+        historyLimitSetting(p);
         
         TextView clear=Ui.button(this,"ОЧИСТИТЬ ИСТОРИЮ",false);p.addView(clear);
         clear.setOnClickListener(v->new AlertDialog.Builder(this).setTitle("Удалить историю?")
            .setPositiveButton("Удалить",(d,w)->{HistoryStore.clear(this);toast("История очищена");}).setNegativeButton("Отмена",null).show());
+    }
+    private void historyLimitSetting(LinearLayout container){
+        container.addView(Ui.text(this,"Количество сохранённых сеансов",13,Ui.fg(),true),Ui.margins(-1,-2,0,7));
+        LinearLayout card=Ui.vertical(this);
+        card.setPadding(Ui.dp(12),Ui.dp(11),Ui.dp(12),Ui.dp(10));
+        card.setBackground(Ui.shape(Ui.soft(this),Ui.dp(14),Ui.border()));
+        int stored=HistoryStore.limit(this);
+        TextView amount=Ui.text(this,stored+" сеансов",15,AppPrefs.accent(this),true);
+        amount.setGravity(Gravity.CENTER);card.addView(amount);
+        SeekBar slider=new SeekBar(this);slider.setMax(19);slider.setProgress((stored-50)/50);
+        slider.setProgressTintList(ColorStateList.valueOf(AppPrefs.accent(this)));
+        slider.setThumbTintList(ColorStateList.valueOf(AppPrefs.accent(this)));
+        slider.setProgressBackgroundTintList(ColorStateList.valueOf(Ui.border()));
+        slider.setContentDescription("Лимит истории: от 50 до 1000 сеансов, шаг 50");
+        slider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
+            @Override public void onProgressChanged(SeekBar seek,int progress,boolean fromUser){
+                int selected=50+progress*50;amount.setText(selected+" сеансов");
+            }
+            @Override public void onStartTrackingTouch(SeekBar seek){}
+            @Override public void onStopTrackingTouch(SeekBar seek){
+                int selected=50+seek.getProgress()*50;
+                HistoryStore.setLimit(MainActivity.this,selected);
+                amount.setText(selected+" сеансов");
+            }
+        });
+        card.addView(slider);
+        container.addView(card,Ui.margins(-1,-2,0,9));
+        container.addView(Ui.text(this,"От 50 до 1000, шаг 50. При уменьшении лимита удаляются только самые старые записи.",11,Ui.muted(),false),Ui.margins(-1,-2,0,12));
     }
     private void appearanceSettings(LinearLayout p){
         QrSettingsCards.appearance(this,p,this::redrawSettings);

@@ -90,10 +90,10 @@ public final class OtaProgressDialog {
         String theme=p.getString("theme_mode","dark");
         boolean light="light".equals(theme),amoled="amoled".equals(theme);
         accent=p.getInt("accent",0xff55dfcb);
-        panel=light?0xffffffff:amoled?0xff101013:0xff14212d;
-        foreground=light?0xff182837:0xfff5f7f9;
-        muted=light?0xff617689:0xffa0adb8;
-        int stroke=light?0xffdce4ed:amoled?0xff303036:0xff304252;
+        panel=Ui.surface(a);
+        foreground=Ui.fg();
+        muted=Ui.muted();
+        int stroke=Ui.border();
         animate=p.getBoolean("motion",true);
         dialog=new Dialog(a);dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         LinearLayout root=new LinearLayout(a);root.setOrientation(LinearLayout.VERTICAL);
@@ -115,7 +115,7 @@ public final class OtaProgressDialog {
         notesScroll=new android.widget.ScrollView(a);
         notesScroll.setFillViewport(false);
         notesScroll.setVerticalScrollBarEnabled(false);
-        notesScroll.setBackground(shape(light?0xfff3f6f9:0xff0c0f12,stroke,15));
+        notesScroll.setBackground(shape(Ui.bg(a),stroke,15));
         notesText=text("",13,foreground,false);
         notesText.setPadding(dp(13),dp(12),dp(13),dp(13));
         notesText.setLineSpacing(dp(4),1f);
@@ -131,7 +131,7 @@ public final class OtaProgressDialog {
         bar=new ProgressBar(a,null,android.R.attr.progressBarStyleHorizontal);
         bar.setMax(1000);bar.setProgressTintList(ColorStateList.valueOf(accent));
         bar.setIndeterminateTintList(ColorStateList.valueOf(accent));
-        bar.setProgressBackgroundTintList(ColorStateList.valueOf(light?0xffe9eef3:0xff2a3139));
+        bar.setProgressBackgroundTintList(ColorStateList.valueOf(Ui.surface2(a)));
         LinearLayout.LayoutParams bl=new LinearLayout.LayoutParams(-1,dp(7));bl.topMargin=dp(12);root.addView(bar,bl);
         bar.setIndeterminate(true);
         LinearLayout actions=new LinearLayout(a);actions.setOrientation(LinearLayout.HORIZONTAL);
