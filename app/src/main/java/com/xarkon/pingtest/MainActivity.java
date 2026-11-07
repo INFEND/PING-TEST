@@ -62,6 +62,7 @@ public final class MainActivity extends Activity {
     private PingService.ProbeEvent journalTail;
     private long journalSessionId=-1;
     private final ArrayList<PingService.ProbeEvent> recentRendered=new ArrayList<>();
+    private String recentPlaceholder=null;
     private boolean journalFollowTail=true,journalUserTouching=false;
     private ValueAnimator journalScrollAnimation;
     private int journalTargetScroll=0;
@@ -236,7 +237,7 @@ public final class MainActivity extends Activity {
         events.addView(titleRow);
         events.addView(eventHeader(),Ui.margins(-1,-2,0,5));
         recentEvents=Ui.vertical(this);
-        recentRendered.clear();
+        recentRendered.clear();recentPlaceholder=null;
         events.addView(recentEvents);
         page.addView(events);
         info=Ui.text(this,"",11,Ui.muted(),false);info.setPadding(Ui.dp(2),Ui.dp(9),Ui.dp(2),Ui.dp(1));
@@ -559,14 +560,17 @@ public final class MainActivity extends Activity {
         for(int i=records.size()-1;i>=0&&recent.size()<4;i--){
             if(records.get(i).number>0)recent.add(0,records.get(i));
         }
-        if(recent.equals(recentRendered))return;
         if(recent.isEmpty()){
-            recentRendered.clear();
-            recentEvents.removeAllViews();
             String status=records.isEmpty()?"Готов к запуску":records.get(records.size()-1).message;
+            if(recentRendered.isEmpty()&&status.equals(recentPlaceholder))return;
+            recentRendered.clear();
+            recentPlaceholder=status;
+            recentEvents.removeAllViews();
             recentEvents.addView(Ui.text(this,status,12,Ui.muted(),false));
             return;
         }
+        recentPlaceholder=null;
+        if(recent.equals(recentRendered))return;
         int overlap=0;
         for(int candidate=Math.min(recentRendered.size(),recent.size());candidate>0;candidate--){
             boolean same=true;
