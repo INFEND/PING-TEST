@@ -659,6 +659,16 @@ public final class MainActivity extends Activity {
             page.addView(card,Ui.margins(-1,-2,0,9));
         }
     }
+    /** Single-line, auto-sized actions stay readable in Russian at large font scales. */
+    private TextView historyActionButton(String title,boolean filled){
+        TextView button=Ui.button(this,title,filled);
+        button.setSingleLine(true);
+        button.setEllipsize(TextUtils.TruncateAt.END);
+        button.setAutoSizeTextTypeUniformWithConfiguration(
+            11,14,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+        button.setContentDescription(title);
+        return button;
+    }
     private void historyDetails(JSONObject obj){
         int sent=obj.optInt("sent"),ok=obj.optInt("ok");
         int completed=Math.max(0,obj.has("done")?obj.optInt("done"):sent);
@@ -750,15 +760,26 @@ public final class MainActivity extends Activity {
         scroll.setBackground(Ui.shape(Ui.bg(this),Ui.dp(11),Ui.border()));
         frame.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         addSpace(frame,12);
-        LinearLayout actions=Ui.horizontal(this);
-        TextView copyButton=Ui.button(this,"КОПИРОВАТЬ",false);
-        TextView shareButton=Ui.button(this,"ПОДЕЛИТЬСЯ",false);
-        TextView closeButton=Ui.button(this,"ЗАКРЫТЬ",true);
-        actions.addView(copyButton,new LinearLayout.LayoutParams(0,Ui.dp(44),1));
-        LinearLayout.LayoutParams gap=new LinearLayout.LayoutParams(0,Ui.dp(44),1);
-        gap.leftMargin=Ui.dp(6);actions.addView(shareButton,gap);
-        LinearLayout.LayoutParams gap2=new LinearLayout.LayoutParams(0,Ui.dp(44),1);
-        gap2.leftMargin=Ui.dp(6);actions.addView(closeButton,gap2);
+        // Two wide actions and a separate close row. Never force three long
+        // Russian labels into narrow 44dp-high cells: text used to wrap and clip.
+        LinearLayout actions=Ui.vertical(this);
+        TextView copyButton=historyActionButton("КОПИРОВАТЬ",false);
+        TextView shareButton=historyActionButton("ПОДЕЛИТЬСЯ",false);
+        TextView closeButton=historyActionButton("ЗАКРЫТЬ",true);
+        boolean stackButtons=getResources().getConfiguration().screenWidthDp<360
+            || getResources().getConfiguration().fontScale>1.25f;
+        if(stackButtons){
+            actions.addView(copyButton,new LinearLayout.LayoutParams(-1,Ui.dp(48)));
+            actions.addView(shareButton,Ui.margins(-1,48,8,0));
+        }else{
+            LinearLayout firstRow=Ui.horizontal(this);
+            firstRow.addView(copyButton,new LinearLayout.LayoutParams(0,Ui.dp(48),1));
+            LinearLayout.LayoutParams shareSlot=new LinearLayout.LayoutParams(0,Ui.dp(48),1);
+            shareSlot.leftMargin=Ui.dp(8);
+            firstRow.addView(shareButton,shareSlot);
+            actions.addView(firstRow,new LinearLayout.LayoutParams(-1,-2));
+        }
+        actions.addView(closeButton,Ui.margins(-1,48,8,0));
         frame.addView(actions);
         copyButton.setOnClickListener(v->copy(out));
         shareButton.setOnClickListener(v->share(out));
