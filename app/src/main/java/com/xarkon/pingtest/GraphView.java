@@ -121,7 +121,12 @@ public final class GraphView extends View {
                 c.drawLine(px,py,x,y,p);
             }
         }
-        for(int i=v.length-1;i>=0;i--)if(v[i]>=0||v[i]==-2f){
+        // Highlight only the actual latest sample. Searching backward for the
+        // last successful reply incorrectly makes an older point look current
+        // after a timeout or an unclassified ICMP error.
+        int latest=v.length-1;
+        if(v[latest]>=0||v[latest]==-2f){
+            int i=latest;
             float x=v.length==1?left:left+i*spacing;
             if(v[i]==-2f){
                 // Emphasize the most recent bounded success without using
@@ -137,7 +142,6 @@ public final class GraphView extends View {
                 p.setColor((col&0x00ffffff)|0x35000000);c.drawCircle(x,y,6*density,p);
                 p.setColor(col);c.drawCircle(x,y,3*density,p);
             }
-            break;
         }
         p.setColor(0xff8b98a5);p.setTextSize(10*density);
         c.drawText("0",left,h-5*density,p);
