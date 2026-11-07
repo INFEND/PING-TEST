@@ -273,9 +273,7 @@ public final class MainActivity extends Activity {
         if(s.version==renderedVersion&&s.id==seenSession)return;
         boolean sameSession=s.id==seenSession;renderedVersion=s.version;seenSession=s.id;
         ip.setText(s.active||s.done>0?(
-            s.vpnInfo.contains("включён")?"● ЧЕРЕЗ VPN":
-            s.vpnInfo.contains("не определён")?"● МАРШРУТ НЕИЗВЕСТЕН":
-            "● БЕЗ VPN"):
+            "● "+routeLabelFromInfo(s.vpnInfo)):
             VpnGuard.statusText(this));
         last.update(s.last,false,sameSession);avg.update(s.avg(),false,sameSession);
         boolean unusable=s.ok==0&&s.lost==0&&!s.error.isEmpty();
@@ -630,9 +628,7 @@ public final class MainActivity extends Activity {
             lossLabel.setTextColor(completed==0?QualityColors.UNKNOWN:QualityColors.loss(percent));
             badges.addView(lossLabel);
             String vpnInfo=o.optString("vpnInfo","");
-            String routeLabel=vpnInfo.contains("не определён")?"МАРШРУТ НЕИЗВЕСТЕН":
-                vpnInfo.contains("включён")?"ЧЕРЕЗ VPN":
-                vpnInfo.isEmpty()?"МАРШРУТ НЕИЗВЕСТЕН":"БЕЗ VPN";
+            String routeLabel=routeLabelFromInfo(vpnInfo);
             TextView routeBadge=Ui.chip(this,routeLabel,false);
             routeBadge.setTextColor(vpnInfo.contains("включён")?QualityColors.RED:Ui.muted());
             LinearLayout.LayoutParams badgeGap=new LinearLayout.LayoutParams(-2,-2);
@@ -653,8 +649,7 @@ public final class MainActivity extends Activity {
         String label=obj.optString("label",TargetStore.friendly(this,obj.optString("host")));
         String rawLog=obj.optString("log","");
         String route=obj.optString("vpnInfo","");
-        String routeLabel=route.contains("включён")?"ЧЕРЕЗ VPN":
-            route.contains("без VPN")||route.contains("не используется")?"БЕЗ VPN":"МАРШРУТ НЕИЗВЕСТЕН";
+        String routeLabel=routeLabelFromInfo(route);
         org.json.JSONArray savedEvents=obj.optJSONArray("events");
         boolean structured=savedEvents!=null&&savedEvents.length()>0;
         StringBuilder report=new StringBuilder(label).append("\n").append(date(obj.optLong("time")))
@@ -755,6 +750,16 @@ public final class MainActivity extends Activity {
             w.setLayout(getResources().getDisplayMetrics().widthPixels-Ui.dp(24),
                 (int)(getResources().getDisplayMetrics().heightPixels*.80f));
         }
+    }
+    // Only explicitly saved UID route observations may be shown as DIRECT.
+    // Older records and Android's feminine "не определена" remain UNKNOWN.
+    private static String routeLabelFromInfo(String info){
+        if(info==null)return "МАРШРУТ НЕИЗВЕСТЕН";
+        String value=info.toLowerCase(Locale.ROOT);
+        if(value.contains("не определ")||value.trim().isEmpty())return "МАРШРУТ НЕИЗВЕСТЕН";
+        if(value.contains("vpn включ")||value.contains("через vpn"))return "ЧЕРЕЗ VPN";
+        if(value.contains("без vpn")||value.contains("vpn не используется"))return "БЕЗ VPN";
+        return "МАРШРУТ НЕИЗВЕСТЕН";
     }
     private String date(long time){return new SimpleDateFormat("dd.MM.yyyy  HH:mm:ss",Locale.getDefault()).format(new Date(time));}
     // QR LINK SETTINGS · genuine section architecture and animation timings
