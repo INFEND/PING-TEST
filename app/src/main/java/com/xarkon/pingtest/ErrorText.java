@@ -64,27 +64,27 @@ public final class ErrorText {
            lower.contains("name or service not known"))
             return "Не удалось определить адрес устройства или сервера. Проверьте подключение и DNS.";
         if(lower.contains("connection refused")||lower.contains("econnrefused"))
-            return "Получатель отклонил соединение. Откройте QR LINK на принимающем устройстве.";
+            return "Удалённый узел отклонил соединение. Проверьте адрес, порт и доступность службы.";
         if(lower.contains("no route to host")||lower.contains("network is unreachable")||
            lower.contains("enetunreach")||lower.contains("ehostunreach"))
-            return "Нет маршрута до получателя. Проверьте Wi-Fi и соединение между устройствами.";
+            return "Нет маршрута до узла. Проверьте подключение к интернету и маршрут приложения.";
         if(lower.contains("sockettimeout")||lower.contains("timed out")||
            lower.contains("timeout")||lower.contains("etimedout"))
-            return "Превышено время ожидания. Убедитесь, что получатель находится рядом и готов к передаче.";
+            return "Превышено время ожидания ответа от узла. Проверьте соединение и доступность адреса.";
         if(lower.contains("broken pipe")||lower.contains("connection reset")||
            lower.contains("econnreset"))
-            return "Соединение прервалось. Непереданные файлы можно отправить повторно.";
+            return "Соединение прервалось. Проверьте стабильность сети и повторите проверку.";
         if(lower.contains("permission denied")||lower.contains("securityexception")||
            lower.contains("eacces"))
-            return "Не хватает разрешений Android. Проверьте доступ к файлам и устройствам поблизости.";
+            return "Недостаточно разрешений Android для сетевой проверки. Проверьте ограничения приложения.";
         if(lower.contains("cleartext communication")||lower.contains("not permitted by network security policy"))
             return "Незащищённое сетевое соединение заблокировано Android.";
         if(lower.contains("no space left")||lower.contains("enospc"))
             return "Недостаточно свободного места на устройстве.";
         if(lower.contains("file not found")||lower.contains("enoent"))
-            return "Исходный файл недоступен или был перемещён.";
+            return "Не удалось найти необходимый файл. Проверьте доступность данных приложения.";
         if(lower.contains("unable to open")||lower.contains("failed to open"))
-            return "Не удалось открыть файл. Проверьте доступ и повторите попытку.";
+            return "Не удалось открыть файл приложения. Проверьте доступ и повторите попытку.";
         Matcher http=HTTP.matcher(message);
         if(http.find()){
             String remote=remoteMessage(message);
