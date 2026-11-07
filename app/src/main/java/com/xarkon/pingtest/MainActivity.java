@@ -710,9 +710,9 @@ public final class MainActivity extends Activity {
             (method.startsWith("TCP")?"СБОИ  ":"ПОТЕРИ  ")+
             (completed>0?fmt(100.0*lost/completed)+"%":"—"),13,Ui.fg(),true));
         if(obj.optInt("timed")>0){
-            stats.addView(Ui.text(this,"MIN  "+fmt(obj.optDouble("min"))+
-                "   AVG  "+fmt(obj.optDouble("avg"))+
-                "   MAX  "+fmt(obj.optDouble("max"))+" мс",11,Ui.muted(),false),
+            stats.addView(Ui.text(this,"МИН  "+fmt(obj.optDouble("min"))+
+                "   СРЕД  "+fmt(obj.optDouble("avg"))+
+                "   МАКС  "+fmt(obj.optDouble("max"))+" мс",11,Ui.muted(),false),
                 Ui.margins(-1,-2,0,5));
         }
         frame.addView(stats,Ui.margins(-1,-2,0,12));
