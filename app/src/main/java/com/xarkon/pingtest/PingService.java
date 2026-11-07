@@ -135,6 +135,10 @@ public final class PingService extends Service {
                 if(activeNetwork==null)throw new UnknownHostException("Сеть приложения не определена");
                 InetAddress[] resolved=activeNetwork.getAllByName(chosen);
                 if(resolved.length==0)throw new UnknownHostException(chosen);
+                // Reject DNS results from a network that disappeared during resolution.
+                // Otherwise the first ICMP packets may be attributed to a stale route.
+                if(!activeNetwork.equals(connectivity.getActiveNetwork()))
+                    throw new UnknownHostException("Сеть приложения изменилась во время DNS");
                 final String resolvedAddress=preferV4(resolved).getHostAddress();
                 synchronized(LOCK){if(!live.active || runId!=expectedRun || stopping)return;
                     live.ip=resolvedAddress;live.route=route;live.method="ICMP";
