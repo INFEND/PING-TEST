@@ -132,8 +132,8 @@ public final class PingService extends Service {
                 Network activeNetwork=connectivity==null?null:connectivity.getActiveNetwork();
                 // Resolve on this UID's active network, including split-tunnel VPN exclusions.
                 // Do not resolve via an unrelated network returned by getAllNetworks().
-                InetAddress[] resolved=activeNetwork==null
-                    ?InetAddress.getAllByName(chosen):activeNetwork.getAllByName(chosen);
+                if(activeNetwork==null)throw new UnknownHostException("Сеть приложения не определена");
+                InetAddress[] resolved=activeNetwork.getAllByName(chosen);
                 if(resolved.length==0)throw new UnknownHostException(chosen);
                 final String resolvedAddress=preferV4(resolved).getHostAddress();
                 synchronized(LOCK){if(!live.active || runId!=expectedRun || stopping)return;
