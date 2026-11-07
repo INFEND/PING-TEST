@@ -61,6 +61,16 @@ public final class GraphView extends View {
         float spacing=v.length>1?(right-left)/(v.length-1):0;
         for(int i=0;i<v.length;i++){
             float x=v.length==1?left:left+i*spacing;
+            if(v[i]==-2f){
+                // A real reply bounded by "<1 ms", not a loss and not
+                // an invented 0 or 1 ms measurement. Hollow marker, no line.
+                p.setStyle(Paint.Style.STROKE);
+                p.setColor(QualityColors.GREEN);
+                p.setStrokeWidth(Math.max(1.5f,1.7f*density));
+                c.drawCircle(x,bottom-4*density,2.7f*density,p);
+                p.setStyle(Paint.Style.FILL);
+                continue;
+            }
             if(v[i]<0){
                 p.setColor(QualityColors.RED);p.setStrokeWidth(1.6f*density);
                 c.drawLine(x-3*density,bottom-5*density,x+3*density,bottom+1*density,p);
@@ -82,12 +92,23 @@ public final class GraphView extends View {
                 c.drawLine(px,py,x,y,p);
             }
         }
-        for(int i=v.length-1;i>=0;i--)if(v[i]>=0){
+        for(int i=v.length-1;i>=0;i--)if(v[i]>=0||v[i]==-2f){
             float x=v.length==1?left:left+i*spacing;
-            float y=bottom-(bottom-top)*Math.min(1f,Math.max(0,v[i]/max));
-            int col=QualityColors.rtt(v[i]);
-            p.setColor((col&0x00ffffff)|0x35000000);c.drawCircle(x,y,6*density,p);
-            p.setColor(col);c.drawCircle(x,y,3*density,p);break;
+            if(v[i]==-2f){
+                // Emphasize the most recent bounded success without using
+                // a fictitious point on the RTT scale.
+                p.setColor(QualityColors.GREEN);
+                p.setStyle(Paint.Style.STROKE);
+                p.setStrokeWidth(Math.max(1.5f,1.7f*density));
+                c.drawCircle(x,bottom-4*density,5.5f*density,p);
+                p.setStyle(Paint.Style.FILL);
+            }else{
+                float y=bottom-(bottom-top)*Math.min(1f,Math.max(0,v[i]/max));
+                int col=QualityColors.rtt(v[i]);
+                p.setColor((col&0x00ffffff)|0x35000000);c.drawCircle(x,y,6*density,p);
+                p.setColor(col);c.drawCircle(x,y,3*density,p);
+            }
+            break;
         }
         p.setColor(0xff8b98a5);p.setTextSize(10*density);
         c.drawText("0",left,h-5*density,p);

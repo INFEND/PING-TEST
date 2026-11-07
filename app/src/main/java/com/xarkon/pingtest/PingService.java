@@ -398,7 +398,10 @@ public final class PingService extends Service {
                 addProbeEvent(seq,rtt,probeBytes,"");
             }else if(fatal){live.error=error;addProbeEvent(seq,-1,probeBytes,error);}
             else{live.lost++;addProbeEvent(seq,-1,probeBytes,error);}
-            if(!fatal){live.chart.add(rtt<0?-1f:(float)rtt);while(live.chart.size()>live.chartLimit)live.chart.remove(0);}
+            // Keep the bounded '<1 ms' successful outcome separate from an
+            // actual lost packet. Neither is a precise numeric RTT.
+            if(!fatal){live.chart.add(rtt==-2?-2f:rtt<0?-1f:(float)rtt);
+                while(live.chart.size()>live.chartLimit)live.chart.remove(0);}
             live.version++;
         }
         signalUpdate();
