@@ -365,6 +365,14 @@ public final class PingService extends Service {
             finishRun(capturedRun,"Сеть приложения изменилась во время ICMP. Начните новую проверку.");
             return;
         }
+        // The Network handle can remain stable while its capabilities change
+        // (for example during VPN handover). Do not attribute an in-flight
+        // result to the route captured at the start of this session.
+        VpnGuard.Route resultRoute=VpnGuard.route(this);
+        if(sessionRoute!=VpnGuard.Route.UNKNOWN && resultRoute!=sessionRoute){
+            finishRun(capturedRun,"Маршрут приложения изменился во время ICMP. Начните новую проверку.");
+            return;
+        }
         // Local routing/permission/command failures are not ICMP packet loss.
         // Only an attempted probe with no reply contributes to loss statistics.
         boolean fatal=error.startsWith("Пинг запрещён")||
