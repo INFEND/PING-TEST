@@ -61,6 +61,11 @@ public final class MainActivity extends Activity {
     private ScrollView journalScroll;
     private PingService.ProbeEvent journalTail;
     private long journalSessionId=-1;
+    private final ArrayList<PingService.ProbeEvent> recentRendered=new ArrayList<>();
+    private boolean journalFollowTail=true,journalUserTouching=false;
+    private ValueAnimator journalScrollAnimation;
+    private int journalTargetScroll=0;
+    private long journalLastFrame=0;
     private final Runnable journalTick=new Runnable(){@Override public void run(){
         if(journalDialog==null||!journalDialog.isShowing())return;
         refreshJournal();handler.postDelayed(this,140);
@@ -100,7 +105,7 @@ public final class MainActivity extends Activity {
         handler.removeCallbacks(journalTick);
         if(registered){try{unregisterReceiver(updates);}catch(Exception ignored){}registered=false;}super.onPause();}
     @Override protected void onDestroy(){handler.removeCallbacks(periodic);handler.removeCallbacks(immediate);
-        handler.removeCallbacks(journalTick);super.onDestroy();}
+        handler.removeCallbacks(journalTick);stopJournalScrollAnimation();super.onDestroy();}
     @Override public void onBackPressed(){if(tab==0)super.onBackPressed();else showTab(0);}
 
     private void showTab(int next){
@@ -231,6 +236,7 @@ public final class MainActivity extends Activity {
         events.addView(titleRow);
         events.addView(eventHeader(),Ui.margins(-1,-2,0,5));
         recentEvents=Ui.vertical(this);
+        recentRendered.clear();
         events.addView(recentEvents);
         page.addView(events);
         info=Ui.text(this,"",11,Ui.muted(),false);info.setPadding(Ui.dp(2),Ui.dp(9),Ui.dp(2),Ui.dp(1));
@@ -546,26 +552,48 @@ public final class MainActivity extends Activity {
         row.addView(size,new LinearLayout.LayoutParams(0,-2,1f));
         return row;
     }
+    /** Reuse unchanged rows so new packets do not flash or reflow the card. */
     private void renderRecentEvents(List<PingService.ProbeEvent> records){
         if(recentEvents==null)return;
-        recentEvents.removeAllViews();
-        int shown=0;
-        for(int i=records.size()-1;i>=0&&shown<4;i--){
-            if(records.get(i).number>0)shown++;
-        }
-        if(shown==0){
-            String status=records.isEmpty()?"Готов к запуску":records.get(records.size()-1).message;
-            recentEvents.addView(Ui.text(this,status,12,Ui.muted(),false));return;
-        }
         ArrayList<PingService.ProbeEvent> recent=new ArrayList<>();
         for(int i=records.size()-1;i>=0&&recent.size()<4;i--){
             if(records.get(i).number>0)recent.add(0,records.get(i));
         }
-        for(PingService.ProbeEvent event:recent)recentEvents.addView(eventRow(event));
+        if(recent.equals(recentRendered))return;
+        if(recent.isEmpty()){
+            recentRendered.clear();
+            recentEvents.removeAllViews();
+            String status=records.isEmpty()?"Готов к запуску":records.get(records.size()-1).message;
+            recentEvents.addView(Ui.text(this,status,12,Ui.muted(),false));
+            return;
+        }
+        int overlap=0;
+        for(int candidate=Math.min(recentRendered.size(),recent.size());candidate>0;candidate--){
+            boolean same=true;
+            for(int j=0;j<candidate;j++){
+                if(recentRendered.get(recentRendered.size()-candidate+j)!=recent.get(j)){
+                    same=false;break;
+                }
+            }
+            if(same){overlap=candidate;break;}
+        }
+        if(overlap==0)recentEvents.removeAllViews();
+        else for(int i=0;i<recentRendered.size()-overlap;i++)recentEvents.removeViewAt(0);
+        for(int i=overlap;i<recent.size();i++){
+            View row=eventRow(recent.get(i));
+            recentEvents.addView(row);
+            if(AppPrefs.bool(this,"motion",true)){
+                row.setAlpha(0f);row.animate().alpha(1f).setDuration(155).start();
+            }
+        }
+        recentRendered.clear();recentRendered.addAll(recent);
     }
     private void fullLogDialog(){
         if(journalDialog!=null&&journalDialog.isShowing())return;
-        Dialog dialog=new Dialog(this);journalDialog=dialog;journalTail=null;journalSessionId=-1;
+        Dialog dialog=new Dialog(this);
+        stopJournalScrollAnimation();
+        journalDialog=dialog;journalTail=null;journalSessionId=-1;
+        journalFollowTail=true;journalUserTouching=false;journalTargetScroll=0;
         LinearLayout frame=Ui.vertical(this);
         frame.setPadding(Ui.dp(16),Ui.dp(15),Ui.dp(16),Ui.dp(14));
         frame.setBackground(Ui.shape(Ui.surface(this),Ui.dp(20),Ui.border()));
@@ -577,6 +605,27 @@ public final class MainActivity extends Activity {
         frame.addView(top,Ui.margins(-1,-2,0,13));
         frame.addView(eventHeader(),Ui.margins(-1,-2,0,5));
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);journalScroll=scroll;
+        scroll.setSmoothScrollingEnabled(false); // Controlled animation instead of ScrollView's 250 ms jump fallback.
+        scroll.setOnTouchListener((view,event)->{
+            int action=event.getActionMasked();
+            if(action==MotionEvent.ACTION_DOWN){
+                journalUserTouching=true;journalFollowTail=false;
+                stopJournalScrollAnimation();
+            }else if(action==MotionEvent.ACTION_UP||action==MotionEvent.ACTION_CANCEL){
+                journalUserTouching=false;
+                if(journalRows!=null&&journalScroll!=null
+                    &&Math.max(0,journalRows.getHeight()-journalScroll.getHeight()-journalScroll.getScrollY())<=Ui.dp(20)){
+                    journalFollowTail=true;
+                }
+            }
+            return false; // Never interfere with normal manual scrolling/fling.
+        });
+        scroll.setOnScrollChangeListener((view,x,y,oldX,oldY)->{
+            if(!journalUserTouching&&!journalFollowTail&&journalRows!=null
+                &&Math.max(0,journalRows.getHeight()-scroll.getHeight()-y)<=Ui.dp(20)){
+                journalFollowTail=true;
+            }
+        });
         journalRows=Ui.vertical(this);journalRows.setPadding(Ui.dp(6),Ui.dp(4),Ui.dp(6),Ui.dp(6));
         scroll.addView(journalRows);
         scroll.setBackground(Ui.shape(Ui.bg(this),Ui.dp(11),Ui.border()));
@@ -591,19 +640,65 @@ public final class MainActivity extends Activity {
         copy.setOnClickListener(v->copy(String.join("\n",PingService.snapshot().log)));
         close.setOnClickListener(v->dialog.dismiss());
         dialog.setOnDismissListener(d->{handler.removeCallbacks(journalTick);
-            journalDialog=null;journalRows=null;journalScroll=null;journalTail=null;journalSessionId=-1;});
+            stopJournalScrollAnimation();
+            journalDialog=null;journalRows=null;journalScroll=null;journalTail=null;journalSessionId=-1;
+            journalFollowTail=false;journalUserTouching=false;});
         dialog.setContentView(frame);dialog.show();
         Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             w.setLayout(getResources().getDisplayMetrics().widthPixels-Ui.dp(24),
                 (int)(getResources().getDisplayMetrics().heightPixels*.77f));}
         refreshJournal();handler.removeCallbacks(journalTick);handler.postDelayed(journalTick,140);
     }
+    private void stopJournalScrollAnimation(){
+        ValueAnimator current=journalScrollAnimation;
+        journalScrollAnimation=null;
+        if(current!=null)current.cancel();
+    }
+    /** Smooth, retargetable follow: new packets extend the destination without
+     * restarting ScrollView's 250 ms smoothScrollTo window (which jumps). */
+    private void followJournalTail(){
+        if(journalScroll==null||journalRows==null||!journalFollowTail||journalUserTouching)return;
+        journalTargetScroll=Math.max(0,journalRows.getHeight()-journalScroll.getHeight());
+        int y=journalScroll.getScrollY();
+        if(!AppPrefs.bool(this,"motion",true)){
+            stopJournalScrollAnimation();
+            journalScroll.scrollTo(0,journalTargetScroll);
+            return;
+        }
+        if(Math.abs(journalTargetScroll-y)<=1){
+            stopJournalScrollAnimation();
+            journalScroll.scrollTo(0,journalTargetScroll);
+            return;
+        }
+        if(journalScrollAnimation!=null&&journalScrollAnimation.isRunning())return;
+        journalLastFrame=SystemClock.uptimeMillis();
+        ValueAnimator chase=ValueAnimator.ofFloat(0f,1f);
+        chase.setDuration(1000);
+        chase.setRepeatCount(ValueAnimator.INFINITE);
+        journalScrollAnimation=chase;
+        chase.addUpdateListener(a->{
+            if(journalScroll==null||!journalFollowTail||journalUserTouching){
+                stopJournalScrollAnimation();return;
+            }
+            long now=SystemClock.uptimeMillis();
+            long frame=Math.max(1,Math.min(80,now-journalLastFrame));
+            journalLastFrame=now;
+            int position=journalScroll.getScrollY();
+            int distance=journalTargetScroll-position;
+            int step=(int)Math.round(distance*(1.0-Math.exp(-frame/145.0)));
+            if(step==0&&distance!=0)step=distance>0?1:-1;
+            journalScroll.scrollTo(0,position+step);
+            if(Math.abs(journalTargetScroll-journalScroll.getScrollY())<=1){
+                journalScroll.scrollTo(0,journalTargetScroll);
+                stopJournalScrollAnimation();
+            }
+        });
+        chase.start();
+    }
     private void refreshJournal(){
         if(journalRows==null||journalScroll==null)return;
         PingService.Snapshot snapshot=PingService.snapshot();
         List<PingService.ProbeEvent> records=snapshot.events;
-        int bottom=journalRows.getHeight()-journalScroll.getHeight()-journalScroll.getScrollY();
-        boolean stickToBottom=bottom<=Ui.dp(42);
         int tailIndex=journalTail==null?-1:records.indexOf(journalTail);
         if(snapshot.id!=journalSessionId||tailIndex<0){
             journalRows.removeAllViews();
@@ -615,13 +710,28 @@ public final class MainActivity extends Activity {
             int newEvents=records.size()-tailIndex-1;
             int oldRows=journalRows.getChildCount();
             int toRemove=Math.max(0,oldRows+newEvents-records.size());
-            for(int i=0;i<toRemove;i++)if(journalRows.getChildCount()>0)journalRows.removeViewAt(0);
-            for(int i=tailIndex+1;i<records.size();i++)journalRows.addView(eventRow(records.get(i)));
+            int removedHeight=0;
+            for(int i=0;i<toRemove;i++)if(journalRows.getChildCount()>0){
+                View first=journalRows.getChildAt(0);
+                removedHeight+=first.getHeight();
+                journalRows.removeViewAt(0);
+            }
+            if(removedHeight>0){
+                // Keep the user's viewport stable when the bounded event list drops old rows.
+                journalScroll.scrollTo(0,Math.max(0,journalScroll.getScrollY()-removedHeight));
+                journalTargetScroll=Math.max(0,journalTargetScroll-removedHeight);
+            }
+            for(int i=tailIndex+1;i<records.size();i++){
+                View row=eventRow(records.get(i));
+                journalRows.addView(row);
+                if(AppPrefs.bool(this,"motion",true)){
+                    row.setAlpha(0f);row.animate().alpha(1f).setDuration(145).start();
+                }
+            }
             journalTail=records.get(records.size()-1);
         }
-        if(stickToBottom)journalScroll.post(()->{
-            if(journalScroll!=null)journalScroll.fullScroll(View.FOCUS_DOWN);
-        });
+        // Resolve the newly laid-out bottom, then gently chase it at frame rate.
+        journalScroll.post(()->followJournalTail());
     }
     // HISTORY
     private void historyPage(){
