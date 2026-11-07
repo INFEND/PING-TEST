@@ -1,4 +1,4 @@
-// v1.5.78: export persisted history events accurately.
+// v1.5.78: export persisted history events accurately; final OTA metadata ready.
 plugins { id 'com.android.application' }
 
 android {
