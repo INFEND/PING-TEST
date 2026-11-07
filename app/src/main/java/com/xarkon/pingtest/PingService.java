@@ -275,11 +275,19 @@ public final class PingService extends Service {
     private static boolean isConfirmedNoReply(String output){
         if(output==null||output.isEmpty())return false;
         String text=output.toLowerCase(Locale.ROOT);
+        // A local socket/route failure can accompany a zero-received summary.
+        // Such an attempt is not proof that an ICMP echo actually left the UID.
+        if(isNetworkFailure(output)||isDnsFailure(output)||
+            text.contains("permission denied")||text.contains("operation not permitted")||
+            text.contains("sendto:")||text.contains("sendmsg:")||
+            text.contains("socket:")||text.contains("invalid argument")||
+            text.contains("network is down"))return false;
         if(text.contains("request timeout")||text.contains("timed out waiting for reply"))
             return true;
-        // Require a zero-received summary, not an arbitrary "100%" token.
+        // Require at least ONE transmitted packet. "0 transmitted, 0 received"
+        // is a local failure, never a confirmed lost echo.
         Pattern zeroReceived=Pattern.compile(
-            "(?m)^\\s*\\d+\\s+packets? transmitted,\\s*0\\s+(?:packets? )?received\\b",
+            "(?m)^\\s*[1-9]\\d*\\s+packets? transmitted,\\s*0\\s+(?:packets? )?received\\b",
             Pattern.CASE_INSENSITIVE);
         return zeroReceived.matcher(output).find();
     }
