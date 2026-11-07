@@ -1,4 +1,4 @@
-// v1.5.76: network-specific Russian diagnostics; compact history loss and VPN chips.
+// v1.5.77: release-version regression validation fix.
 plugins { id 'com.android.application' }
 
 android {
@@ -8,8 +8,8 @@ android {
         applicationId 'com.xarkon.pingtest'
         minSdk 26
         targetSdk 35
-        versionCode 84
-        versionName '1.5.76'
+        versionCode 85
+        versionName '1.5.77'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
