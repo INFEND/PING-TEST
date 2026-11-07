@@ -655,10 +655,30 @@ public final class MainActivity extends Activity {
         String route=obj.optString("vpnInfo","");
         String routeLabel=route.contains("включён")?"ЧЕРЕЗ VPN":
             route.contains("без VPN")||route.contains("не используется")?"БЕЗ VPN":"МАРШРУТ НЕИЗВЕСТЕН";
-        String out=label+"\n"+date(obj.optLong("time"))+"\n"+
-            "Маршрут: "+routeLabel+"\nОтправлено: "+sent+"\nОтветов: "+ok+
-            "\n"+(method.startsWith("TCP")?"Сбоев: ":"Потерь: ")+lost+
-            "\nПропущено: "+obj.optInt("skipped")+"\n"+rawLog;
+        org.json.JSONArray savedEvents=obj.optJSONArray("events");
+        boolean structured=savedEvents!=null&&savedEvents.length()>0;
+        StringBuilder report=new StringBuilder(label).append("\n").append(date(obj.optLong("time")))
+            .append("\nМаршрут: ").append(routeLabel).append("\nОтправлено: ").append(sent)
+            .append("\nОтветов: ").append(ok).append("\n")
+            .append(method.startsWith("TCP")?"Сбоев: ":"Потерь: ").append(lost)
+            .append("\nПропущено: ").append(obj.optInt("skipped"));
+        if(structured){
+            report.append("\nСохранённые события:");
+            for(int i=0;i<savedEvents.length();i++){
+                JSONObject event=savedEvents.optJSONObject(i);
+                if(event==null)continue;
+                report.append("\n#").append(event.optInt("number",0))
+                    .append("  ").append(event.optDouble("latencyMs",-1)>=0?
+                        fmt(event.optDouble("latencyMs"))+" мс":"—")
+                    .append("  ").append(event.optInt("payloadBytes",0)).append(" Б")
+                    .append("  ").append(event.optString("message",""));
+            }
+        }else if(!rawLog.trim().isEmpty()){
+            report.append("\n").append(rawLog);
+        }else{
+            report.append("\nСобытия этого сеанса не сохранены.");
+        }
+        String out=report.toString();
         Dialog dialog=new Dialog(this);
         LinearLayout frame=Ui.vertical(this);
         frame.setPadding(Ui.dp(16),Ui.dp(15),Ui.dp(16),Ui.dp(14));
@@ -685,8 +705,6 @@ public final class MainActivity extends Activity {
         frame.addView(stats,Ui.margins(-1,-2,0,12));
         frame.addView(Ui.text(this,"СОХРАНЁННЫЙ ЖУРНАЛ",12,AppPrefs.accent(this),true),
             Ui.margins(-1,-2,0,7));
-        org.json.JSONArray savedEvents=obj.optJSONArray("events");
-        boolean structured=savedEvents!=null&&savedEvents.length()>0;
         if(structured)frame.addView(eventHeader(),Ui.margins(-1,-2,0,5));
         ScrollView scroll=new ScrollView(this);
         LinearLayout rows=Ui.vertical(this);
@@ -769,7 +787,7 @@ public final class MainActivity extends Activity {
         number(root,"Размер пакета (байт)","size",64,0,65000);
         number(root,"TTL","ttl",64,1,255);
         graphSizeSetting(root);
-        TextView note=Ui.text(this,"При активном VPN приложение предупредит о проверке через туннель. Отказ от VPN необходим для измерения обычного маршрута.",12,Ui.muted(),false);
+        TextView note=Ui.text(this,"Предупреждение о VPN появляется только если маршрут самого PING TEST проходит через туннель. При исключении приложения из VPN используется его фактическая сеть.",12,Ui.muted(),false);
         root.addView(note,Ui.margins(-1,-2,0,12));
         TextView reset=Ui.button(this,"СБРОС ПАРАМЕТРОВ",false);root.addView(reset);reset.setOnClickListener(v->{
             AppPrefs.put(this,"count",0);AppPrefs.put(this,"interval",200);AppPrefs.put(this,"timeout",3);
