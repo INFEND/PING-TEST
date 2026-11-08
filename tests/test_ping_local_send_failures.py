@@ -16,5 +16,5 @@ for diagnostic in (
 
 classifier = re.search(r"private static boolean isConfirmedNoReply\(String output\)\s*\{(.*?)\n    \}", source, re.S)
 assert classifier and "isNetworkFailure(output)" in classifier.group(1)
-assert classifier.group(1).index("isNetworkFailure(output)") < classifier.group(1).index('text.contains("request timeout")')
+assert classifier.group(1).index("isNetworkFailure(output)") < classifier.group(1).index("zeroReceived.matcher(output).find()")
 print("PASS: native ping local send errors take precedence over timeout/loss")

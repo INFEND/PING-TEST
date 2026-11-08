@@ -9,7 +9,7 @@ BODY=SRC.split("private static boolean isConfirmedNoReply(String output){",1)[1]
 class ZeroTransmissionTimeoutRegression(unittest.TestCase):
     def test_zero_transmission_precedes_timeout(self):
         self.assertIn("zeroTransmitted.matcher(output).find()",BODY)
-        self.assertLess(BODY.index("zeroTransmitted.matcher(output).find()"),BODY.index('text.contains("request timeout")'))
+        self.assertLess(BODY.index("zeroTransmitted.matcher(output).find()"),BODY.index("zeroReceived.matcher(output).find()"))
         self.assertIn("if(zeroTransmitted.matcher(output).find())return false;",BODY)
     def test_zero_transmission_pattern(self):
         p=re.compile(r"^\s*0\s+packets? transmitted\b",re.I|re.M)

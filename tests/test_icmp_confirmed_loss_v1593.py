@@ -12,7 +12,7 @@ class IcmpLoss(unittest.TestCase):
         self.assertIn('else if(fatal){live.error=error;addProbeEvent',SOURCE)
     def test_confirmed_loss_requires_explicit_evidence(self):
         code=SOURCE.split('private static boolean isConfirmedNoReply(',1)[1].split('private void probe(',1)[0]
-        self.assertIn('request timeout',code)
+        self.assertIn('zeroReceived.matcher(output).find()',code)
         self.assertIn('packets? transmitted',code)
         self.assertIn('received',code)
         self.assertNotIn('100% packet loss',code)

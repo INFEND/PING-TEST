@@ -18,7 +18,7 @@ class ConfirmedLossRegression(unittest.TestCase):
         for token in ('isNetworkFailure(output)','isDnsFailure(output)','sendto:','sendmsg:','permission denied','operation not permitted'):
             self.assertIn(token,METHOD)
         self.assertLess(METHOD.index('isNetworkFailure(output)'),METHOD.index('zeroReceived.matcher(output).find()'))
-        self.assertLess(METHOD.index('sendto:'),METHOD.index('request timeout'))
+        self.assertLess(METHOD.index('sendto:'),METHOD.index('zeroReceived.matcher(output).find()'))
     def test_bounded_reply_stays_success(self):
         self.assertIn('if(rtt>=0||rtt==-2)',SOURCE)
         self.assertIn('live.chart.add(rtt==-2?-2f:',SOURCE)
