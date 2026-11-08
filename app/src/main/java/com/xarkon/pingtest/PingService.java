@@ -445,7 +445,7 @@ public final class PingService extends Service {
                 live.ok++;
                 if(rtt>=0){live.timed++;live.last=rtt;live.total+=rtt;live.min=Math.min(live.min,rtt);live.max=Math.max(live.max,rtt);
                 if(live.previous>=0){live.jitterTotal+=Math.abs(rtt-live.previous);live.jitterCount++;}
-                live.previous=rtt;}else{live.last=-1;live.previous=-1;}
+                live.previous=rtt;}else{live.last=-2;live.previous=-1;}
                 if(replyTtl>=0)live.ttl=replyTtl;
                 addProbeEvent(seq,rtt,probeBytes,"");
             }else if(fatal){live.error=error;addProbeEvent(seq,-1,probeBytes,error);}
