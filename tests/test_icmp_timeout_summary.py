@@ -8,7 +8,7 @@ start = source.index("private static boolean isConfirmedNoReply(")
 end = source.index("\n    private void probe(", start)
 method = source[start:end]
 
-# The positive evidence must be the transmitted>0, received=0 summary.
+# A -c 1 invocation must report exactly one transmitted echo and zero received.
 assert "zeroReceived.matcher(output).find()" in method
 assert "zeroTransmitted.matcher(output).find()" in method
 assert "positiveReceived.matcher(output).find()" in method
@@ -22,6 +22,8 @@ cases = [
     ("Request timeout\n1 packets transmitted, 1 received", False),
     ("Request timeout\n1 packets transmitted, 0 received", True),
     ("1 packets transmitted, 0 received", True),
+    ("2 packets transmitted, 0 received", False),
+    ("10 packets transmitted, 0 received", False),
 ]
 summary = re.compile(r"(?m)^\s*[1-9]\d*\s+packets? transmitted,\s*0\s+(?:packets? )?received\b", re.I)
 for output, expected in cases:
