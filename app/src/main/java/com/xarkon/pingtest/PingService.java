@@ -288,6 +288,12 @@ public final class PingService extends Service {
         Pattern zeroTransmitted=Pattern.compile(
             "(?m)^\\s*0\\s+packets? transmitted\\b",Pattern.CASE_INSENSITIVE);
         if(zeroTransmitted.matcher(output).find())return false;
+        // A summary reporting a received echo contradicts an earlier timeout
+        // line. Never manufacture a lost packet from mixed vendor diagnostics.
+        Pattern positiveReceived=Pattern.compile(
+            "(?m)^\\s*[1-9]\\d*\\s+packets? transmitted,\\s*[1-9]\\d*\\s+(?:packets? )?received\\b",
+            Pattern.CASE_INSENSITIVE);
+        if(positiveReceived.matcher(output).find())return false;
         if(text.contains("request timeout")||text.contains("timed out waiting for reply"))
             return true;
         // Require at least ONE transmitted packet. "0 transmitted, 0 received"
