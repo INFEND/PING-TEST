@@ -292,7 +292,12 @@ public final class PingService extends Service {
         Pattern zeroTransmitted=Pattern.compile(
             "(?m)^\\s*0\\s+packets? transmitted\\b",Pattern.CASE_INSENSITIVE);
         if(zeroTransmitted.matcher(output).find())return false;
-        // Toybox/iputils may report "+N errors" after a failed local send or\n        // ICMP error. A zero-received summary with errors is not a clean\n        // one-echo timeout and must not inflate measured packet loss.\n        Pattern reportedErrors=Pattern.compile(\n            "(?i)\\\\+\\\\s*[1-9]\\\\d*\\\\s+errors?\\\\b");\n        if(reportedErrors.matcher(output).find())return false;\n        // A summary reporting a received echo contradicts an earlier timeout
+        // Native ping can report +N errors for local sends or ICMP errors.
+        // Such a summary does not prove a clean one-packet timeout.
+        Pattern reportedErrors=Pattern.compile(
+            "(?i)\\+\\s*[1-9]\\d*\\s+errors?\\b");
+        if(reportedErrors.matcher(output).find())return false;
+        // A summary reporting a received echo contradicts an earlier timeout
         // line. Never manufacture a lost packet from mixed vendor diagnostics.
         Pattern positiveReceived=Pattern.compile(
             "(?m)^\\s*[1-9]\\d*\\s+packets? transmitted,\\s*[1-9]\\d*\\s+(?:packets? )?received\\b",
