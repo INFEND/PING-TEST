@@ -25,7 +25,7 @@ cases = [
     ("2 packets transmitted, 0 received", False),
     ("10 packets transmitted, 0 received", False),
 ]
-summary = re.compile(r"(?m)^\s*[1-9]\d*\s+packets? transmitted,\s*0\s+(?:packets? )?received\b", re.I)
+summary = re.compile(r"(?m)^\s*1\s+packets? transmitted,\s*0\s+(?:packets? )?received\b", re.I)
 for output, expected in cases:
     actual = bool(summary.search(output))
     assert actual == expected, (output, actual, expected)
