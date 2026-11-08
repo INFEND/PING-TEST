@@ -229,7 +229,12 @@ public final class PingService extends Service {
             try{
                 double latency=Double.parseDouble(time.group(1).replace(',','.'));
                 // A bounded RTT is not an exact numeric measurement.
-                if(line.charAt(time.start()+4)=='<')latency=-2;
+                // Only a bound of <=1 ms proves the displayed '<1 ms' bucket.
+                // 'time<10' must not be fabricated as a sub-millisecond reply.
+                if(line.charAt(time.start()+4)=='<'){
+                    if(latency>1)continue;
+                    latency=-2;
+                }
                 if(!Double.isFinite(latency)||(latency<0&&latency!=-2))continue;
                 Matcher ttl=TTL.matcher(line);
                 int replyTtl=-1;
