@@ -298,8 +298,10 @@ public final class PingService extends Service {
             "(?m)^\\s*[1-9]\\d*\\s+packets? transmitted,\\s*[1-9]\\d*\\s+(?:packets? )?received\\b",
             Pattern.CASE_INSENSITIVE);
         if(positiveReceived.matcher(output).find())return false;
-        if(text.contains("request timeout")||text.contains("timed out waiting for reply"))
-            return true;
+        // A bare timeout line can be emitted before a local send failure.
+        // Require the native summary to confirm an attempted echo before
+        // classifying a timeout as packet loss.
+        // The zero-received summary below also covers timeout diagnostics.
         // Require at least ONE transmitted packet. "0 transmitted, 0 received"
         // is a local failure, never a confirmed lost echo.
         Pattern zeroReceived=Pattern.compile(
