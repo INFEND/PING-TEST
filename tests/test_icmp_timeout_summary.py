@@ -12,6 +12,7 @@ method = source[start:end]
 assert "zeroReceived.matcher(output).find()" in method
 assert "zeroTransmitted.matcher(output).find()" in method
 assert "positiveReceived.matcher(output).find()" in method
+assert "reportedErrors.matcher(output).find()" in method
 assert not re.search(r'if\s*\(\s*text\.contains\("request timeout"\)', method), (
     "A timeout line alone must not count as packet loss"
 )
@@ -24,9 +25,11 @@ cases = [
     ("1 packets transmitted, 0 received", True),
     ("2 packets transmitted, 0 received", False),
     ("10 packets transmitted, 0 received", False),
+    ("1 packets transmitted, 0 received, +1 errors", False),
+    ("1 packets transmitted, 0 received, +3 errors", False),
 ]
 summary = re.compile(r"(?m)^\s*1\s+packets? transmitted,\s*0\s+(?:packets? )?received\b", re.I)
 for output, expected in cases:
-    actual = bool(summary.search(output))
+    actual = bool(summary.search(output)) and not bool(re.search(r"\+\s*[1-9]\d*\s+errors?\b", output, re.I))
     assert actual == expected, (output, actual, expected)
 print("ICMP timeout summary regression checks: OK")
