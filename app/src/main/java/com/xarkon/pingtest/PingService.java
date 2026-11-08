@@ -305,7 +305,7 @@ public final class PingService extends Service {
         // Require at least ONE transmitted packet. "0 transmitted, 0 received"
         // is a local failure, never a confirmed lost echo.
         Pattern zeroReceived=Pattern.compile(
-            "(?m)^\\s*[1-9]\\d*\\s+packets? transmitted,\\s*0\\s+(?:packets? )?received\\b",
+            "(?m)^\\s*1\\s+packets? transmitted,\\s*0\\s+(?:packets? )?received\\b",
             Pattern.CASE_INSENSITIVE);
         return zeroReceived.matcher(output).find();
     }
