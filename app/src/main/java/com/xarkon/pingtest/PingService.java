@@ -282,6 +282,12 @@ public final class PingService extends Service {
             text.contains("sendto:")||text.contains("sendmsg:")||
             text.contains("socket:")||text.contains("invalid argument")||
             text.contains("network is down"))return false;
+        // A vendor may print "Request timeout" even when its own summary
+        // reports that no echo was transmitted. Explicit zero transmission
+        // must override timeout wording: no packet left this process.
+        Pattern zeroTransmitted=Pattern.compile(
+            "(?m)^\\s*0\\s+packets? transmitted\\b",Pattern.CASE_INSENSITIVE);
+        if(zeroTransmitted.matcher(output).find())return false;
         if(text.contains("request timeout")||text.contains("timed out waiting for reply"))
             return true;
         // Require at least ONE transmitted packet. "0 transmitted, 0 received"
