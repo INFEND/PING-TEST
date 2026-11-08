@@ -304,7 +304,7 @@ public final class MainActivity extends Activity {
         boolean unusable=s.ok==0&&s.lost==0&&!s.error.isEmpty();
         failed.update(s.sent==0||unusable?-1:s.lossPct(),true,sameSession);
         if(qualityState!=null){
-            double ms=s.last>=0?s.last:s.avg();
+            double ms=s.last==-2?0.5:s.last>=0?s.last:s.avg();
             qualityState.setText(ms<0?(s.lost>0?"НЕТ ОТВЕТА":"ОЖИДАНИЕ"):
                 ms<=45?"ОТЛИЧНО":ms<=110?"СТАБИЛЬНО":ms<=240?"ПОВЫШЕННАЯ":"ВЫСОКАЯ");
             qualityState.setTextColor(ms<0?(s.lost>0?QualityColors.RED:QualityColors.UNKNOWN):QualityColors.rtt(ms));
@@ -1128,6 +1128,7 @@ public final class MainActivity extends Activity {
         void update(double next,boolean percent,boolean animate){
             if(Double.compare(target,next)==0)return;
             if(motion!=null)motion.cancel();target=next;
+            if(next==-2 && kind==0){shown=next;setText("<1");setTextColor(QualityColors.rtt(0.5));return;}
             if(next<0||Double.isNaN(next)){shown=next;setText("—");setTextColor(QualityColors.UNKNOWN);return;}
             if(!animate||!AppPrefs.bool(MainActivity.this,"motion",true)||Double.isNaN(shown)||shown<0){
                 shown=next;setText(fmt(next)+(percent?" %":""));setTextColor(quality(next));return;
