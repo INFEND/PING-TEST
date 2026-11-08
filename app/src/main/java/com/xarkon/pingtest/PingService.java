@@ -266,7 +266,11 @@ public final class PingService extends Service {
             text.contains("connect: invalid argument")||
             text.contains("address family not supported by protocol")||
             text.contains("protocol not supported")||
-            text.contains("socket: permission denied");
+            text.contains("socket: permission denied")||
+            text.contains("cannot assign requested address")||
+            text.contains("no buffer space available")||
+            text.contains("message too long")||
+            text.contains("network interface is down");
     }
 
     /** Exit code 1 alone is not proof of ICMP loss: vendor ping builds may
