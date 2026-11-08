@@ -13,6 +13,7 @@ assert "zeroReceived.matcher(output).find()" in method
 assert "zeroTransmitted.matcher(output).find()" in method
 assert "positiveReceived.matcher(output).find()" in method
 assert "reportedErrors.matcher(output).find()" in method
+assert r'Pattern reportedErrors=Pattern.compile(\n            "(?i)\\\\+\\\\s*[1-9]\\\\d*\\\\s+errors?\\\\b");' in method, "Java regex literal for +N errors must remain correctly escaped"
 assert not re.search(r'if\s*\(\s*text\.contains\("request timeout"\)', method), (
     "A timeout line alone must not count as packet loss"
 )
