@@ -142,6 +142,12 @@ public final class PingService extends Service {
                 // Otherwise the first ICMP packets may be attributed to a stale route.
                 if(!activeNetwork.equals(connectivity.getActiveNetwork()))
                     throw new UnknownHostException("Сеть приложения изменилась во время DNS");
+                // A VPN handover may change capabilities without replacing the
+                // Network handle. Never publish DNS or ICMP results under the
+                // route label captured before asynchronous resolution.
+                VpnGuard.Route resolvedRoute=VpnGuard.route(this);
+                if(selectedRoute!=VpnGuard.Route.UNKNOWN && resolvedRoute!=selectedRoute)
+                    throw new UnknownHostException("Маршрут приложения изменился во время DNS");
                 final String resolvedAddress=preferV4(resolved).getHostAddress();
                 // Publish the network atomically for the active session only.
                 synchronized(LOCK){if(!live.active || runId!=expectedRun || stopping)return;
