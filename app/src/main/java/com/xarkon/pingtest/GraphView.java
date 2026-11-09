@@ -88,6 +88,9 @@ public final class GraphView extends View {
         if(v.length==0){p.setColor(0xff9ba8b1);p.setTextSize(12*density);
             c.drawText("Ожидание измерений",left+10*density,h/2f,p);return;}
         float spacing=v.length>1?(right-left)/(v.length-1):0;
+        // Reuse the fill path across up to 500 samples instead of allocating
+        // hundreds of short-lived Path objects on every animation frame.
+        Path area=new Path();
         for(int i=0;i<v.length;i++){
             float x=v.length==1?left:left+i*spacing;
             if(v[i]==-2f){
@@ -111,7 +114,7 @@ public final class GraphView extends View {
             if(i>0&&v[i-1]>=0){
                 float px=left+(i-1)*spacing;
                 float py=bottom-(bottom-top)*Math.min(1f,Math.max(0,v[i-1]/max));
-                Path area=new Path();area.moveTo(px,bottom);area.lineTo(px,py);area.lineTo(x,y);area.lineTo(x,bottom);area.close();
+                area.rewind();area.moveTo(px,bottom);area.lineTo(px,py);area.lineTo(x,y);area.lineTo(x,bottom);area.close();
                 p.setStyle(Paint.Style.FILL);p.setColor((color&0x00ffffff)|0x1D000000);
                 c.drawPath(area,p);
                 p.setStrokeCap(Paint.Cap.ROUND);
