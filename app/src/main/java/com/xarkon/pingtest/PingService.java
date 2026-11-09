@@ -146,6 +146,11 @@ public final class PingService extends Service {
                 // Network handle. Never publish DNS or ICMP results under the
                 // route label captured before asynchronous resolution.
                 VpnGuard.Route resolvedRoute=VpnGuard.route(this);
+                // Route inspection itself performs another ConnectivityManager lookup.
+                // The UID default network can change between the earlier DNS
+                // identity check and that lookup, so verify identity once more.
+                if(!activeNetwork.equals(connectivity.getActiveNetwork()))
+                    throw new UnknownHostException("Сеть приложения изменилась при проверке маршрута");
                 if(selectedRoute!=VpnGuard.Route.UNKNOWN && resolvedRoute!=selectedRoute)
                     throw new UnknownHostException("Маршрут приложения изменился во время DNS");
                 final String resolvedAddress=preferV4(resolved).getHostAddress();
