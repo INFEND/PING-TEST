@@ -466,8 +466,17 @@ public final class PingService extends Service {
                 error.startsWith("Ответ ping не распознан")||
                 error.startsWith("Неоднозначный результат ping")||
                 error.equals("Прервано");
+        boolean routeChangedAtCommit=false;
         synchronized(LOCK){
-            if(!live.active||runId!=capturedRun)return;
+            if(!live.active||runId!=capturedRun||stopping)return;
+            // Revalidate immediately before committing counters. The UID route
+            // may have changed after the earlier post-process check.
+            ConnectivityManager commitCm=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+            Network commitNetwork=commitCm==null?null:commitCm.getActiveNetwork();
+            VpnGuard.Route commitRoute=VpnGuard.route(this);
+            routeChangedAtCommit=sessionNetwork==null||!sessionNetwork.equals(commitNetwork)||
+                (sessionRoute!=VpnGuard.Route.UNKNOWN&&commitRoute!=sessionRoute);
+            if(!routeChangedAtCommit){
             live.done++;
             if(rtt>=0||rtt==-2){
                 live.ok++;
@@ -483,6 +492,11 @@ public final class PingService extends Service {
             if(!fatal){live.chart.add(rtt==-2?-2f:rtt<0?-1f:(float)rtt);
                 while(live.chart.size()>live.chartLimit)live.chart.remove(0);}
             live.version++;
+            }
+        }
+        if(routeChangedAtCommit){
+            finishRun(capturedRun,"Сеть приложения изменилась перед записью ICMP. Начните новую проверку.");
+            return;
         }
         signalUpdate();
         if(fatal){finishRun(capturedRun,error);return;}
