@@ -149,11 +149,23 @@ public final class PingService extends Service {
                 if(selectedRoute!=VpnGuard.Route.UNKNOWN && resolvedRoute!=selectedRoute)
                     throw new UnknownHostException("Маршрут приложения изменился во время DNS");
                 final String resolvedAddress=preferV4(resolved).getHostAddress();
+                // Initial capabilities can be UNKNOWN while Android establishes
+                // the UID route. Publish the most recent known classification,
+                // rather than retaining a stale "unknown" label for the session.
+                final VpnGuard.Route effectiveRoute=resolvedRoute==VpnGuard.Route.UNKNOWN
+                    ?selectedRoute:resolvedRoute;
+                final String effectiveRouteText=effectiveRoute==VpnGuard.Route.VPN
+                    ?"Сеть по умолчанию: VPN":effectiveRoute==VpnGuard.Route.DIRECT
+                    ?"Сеть по умолчанию: без VPN":"Не определён";
                 // Publish the network atomically for the active session only.
                 synchronized(LOCK){if(!live.active || runId!=expectedRun || stopping)return;
                     sessionNetwork=activeNetwork;
-                    live.ip=resolvedAddress;live.route=route;live.method="ICMP";
-                    addLog("Сеть приложения: "+route);live.version++;}
+                    sessionRoute=effectiveRoute;
+                    live.vpnInfo=effectiveRoute==VpnGuard.Route.VPN?"VPN включён":
+                        effectiveRoute==VpnGuard.Route.DIRECT?"Сеть приложения без VPN":
+                        "Сеть по умолчанию не определена";
+                    live.ip=resolvedAddress;live.route=effectiveRouteText;live.method="ICMP";
+                    addLog("Сеть приложения: "+effectiveRouteText);live.version++;}
                 signalUpdate();
                 synchronized(LOCK){if(!live.active || runId!=expectedRun || stopping)return;
                     ScheduledExecutorService c=clock;
