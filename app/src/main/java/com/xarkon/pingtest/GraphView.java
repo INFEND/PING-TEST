@@ -12,6 +12,9 @@ import java.util.Locale;
 /** Realtime RTT chart, quality-colored samples, error markers and animated latest sample. */
 public final class GraphView extends View {
     private float[] points=new float[0];
+    // UI-thread-only scratch storage for the interpolated last RTT sample.
+    // Never mutate points: it is the immutable snapshot used by setData().
+    private float[] animatedPoints=new float[0];
     private float progress=1f, previous=-1;
     private float displayMax=Float.NaN,scaleStart=Float.NaN,scaleTarget=Float.NaN;
     private int accent=0xff55dfcb,bg=0xff0b0b0d;
@@ -33,7 +36,10 @@ public final class GraphView extends View {
             scaleTarget=required>displayMax?required:
                 required<displayMax*.70f?required:displayMax;
         }
-        points=fresh;accent=color;bg=background;
+        points=fresh;
+        // Resize only when the sample window length changes, not on each frame.
+        if(animatedPoints.length!=fresh.length) animatedPoints=new float[fresh.length];
+        accent=color;bg=background;
         if(animator!=null)animator.cancel();
         boolean animate=AppPrefs.bool(getContext(),"motion",true)&&fresh.length>0
             &&(newSample||Math.abs(scaleTarget-scaleStart)>0.01f);
@@ -54,7 +60,8 @@ public final class GraphView extends View {
     @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);
         float[] animated=points;
         if(points.length>0&&progress<1f&&previous>=0&&points[points.length-1]>=0){
-            animated=Arrays.copyOf(points,points.length);
+            System.arraycopy(points,0,animatedPoints,0,points.length);
+            animated=animatedPoints;
             animated[points.length-1]=previous+(points[points.length-1]-previous)*progress;
         }
         renderWithScale(canvas,getWidth(),getHeight(),animated,accent,bg,displayMax);
