@@ -410,7 +410,20 @@ public final class PingService extends Service {
                 // Only accept an actual successful ping process and a reply line
                 // naming the probed address. Prevents false-positive latency.
                 int exitCode=process.exitValue();
-                double[] parsed=exitCode==0?parseIcmpReply(output,probeAddress):null;
+                // Some vendor ping builds return 1 despite a received echo. Accept that
+                // contradiction only with an explicit positive one-packet summary,
+                // a matching ICMP reply and no evidence of local execution failure.
+                boolean receivedDespiteExitOne=exitCode==1
+                    && Pattern.compile("(?m)^\\\\s*1\\\\s+packets? transmitted,\\\\s*1\\\\s+(?:packets? )?received\\\\b",
+                        Pattern.CASE_INSENSITIVE).matcher(output).find()
+                    && !isNetworkFailure(output) && !isDnsFailure(output)
+                    && !output.toLowerCase(Locale.ROOT).contains("permission denied")
+                    && !output.toLowerCase(Locale.ROOT).contains("operation not permitted")
+                    && !output.toLowerCase(Locale.ROOT).contains("unknown option")
+                    && !output.toLowerCase(Locale.ROOT).contains("invalid option")
+                    && !output.toLowerCase(Locale.ROOT).contains("usage:");
+                double[] parsed=(exitCode==0||receivedDespiteExitOne)
+                    ?parseIcmpReply(output,probeAddress):null;
                 if(parsed!=null){rtt=parsed[0];replyTtl=(int)parsed[1];}
                 if(rtt<0&&rtt!=-2){
                     // A vendor may emit more than the bounded 8 KiB capture.
