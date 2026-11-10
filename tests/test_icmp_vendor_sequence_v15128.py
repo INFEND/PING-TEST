@@ -8,7 +8,7 @@ SEQ = r"\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1(?![\w.,])"
 
 class VendorSequenceSpacing(unittest.TestCase):
     def test_parser_uses_strict_sequence_one(self):
-        self.assertIn(SEQ.replace("\\b", "\\\\b"), SOURCE)
+        self.assertIn(SEQ.replace("\\b", "\\\\b").replace("\\w", "\\\\w"), SOURCE)
 
     def test_vendor_spacing_and_wrong_sequences(self):
         pattern = re.compile(SEQ, re.I)
