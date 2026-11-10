@@ -425,7 +425,10 @@ public final class PingService extends Service {
                     else if(isNetworkFailure(output))error="Сеть недоступна";
                     // Only exit 1 means no ICMP reply. Any other nonzero code,
                     // including negative vendor-specific codes, is a local failure.
-                    else if(exitCode==1&&isConfirmedNoReply(output))error="Нет ответа";
+                    // A valid echo reply contradicts a zero-received vendor summary.
+                    // Never count such inconsistent output as confirmed packet loss.
+                    else if(exitCode==1&&isConfirmedNoReply(output)&&parseIcmpReply(output,probeAddress)==null)
+                        error="Нет ответа";
                     else if(exitCode==1)error="Неоднозначный результат ping (код 1)";
                     else if(exitCode==0)error="Ответ ping не распознан";
                     else error="Локальная ошибка ping (код "+exitCode+")";
