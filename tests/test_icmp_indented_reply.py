@@ -9,11 +9,11 @@ end = source.index("private static boolean isDnsFailure(", start)
 method = source[start:end]
 assert r'(?m)^[ \\t]*\\d+ bytes from ' in method, "Only horizontal indentation is allowed"
 assert 'Pattern.quote(expectedAddress)' in method
-assert r'\\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1(?![\\w.,:/+\\-])' in method
+assert r'\\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1(?![\\w.,:/+-])' in method
 
 def matches(output, address):
     pattern = re.compile(r"(?m)^[ \t]*\d+ bytes from " + re.escape(address)
-                         + r"(?:%[\w.:-]+)?(?::|\s)(?=[^\r\n]*\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1(?![\w.,:/+\-]))[^\r\n]*$", re.I)
+                         + r"(?:%[\w.:-]+)?(?::|\s)(?=[^\r\n]*\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1(?![\w.,:/+-]))[^\r\n]*$", re.I)
     return bool(pattern.search(output))
 
 ip = "1.1.1.1"
