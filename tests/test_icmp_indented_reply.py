@@ -7,7 +7,7 @@ source = Path("app/src/main/java/com/xarkon/pingtest/PingService.java").read_tex
 start = source.index("private static double[] parseIcmpReply(")
 end = source.index("private static boolean isDnsFailure(", start)
 method = source[start:end]
-assert r'(?m)^[ \t]*\d+ bytes from ' in method, "Only horizontal indentation is allowed"
+assert r'(?m)^[ \\t]*\\d+ bytes from ' in method, "Only horizontal indentation is allowed"
 assert 'Pattern.quote(expectedAddress)' in method
 assert r'\bicmp_seq[= ]1\b' in method
 
