@@ -27,7 +27,7 @@ public final class PingService extends Service {
     private static final int ONGOING = 117, GRAPH = 118;
     private static final Object LOCK = new Object();
     private static final Pattern TIME = Pattern.compile("\\btime\\s*[=<]\\s*([0-9]+(?:[.,][0-9]+)?)(?![0-9.,eE+\\-\\w])", Pattern.CASE_INSENSITIVE);
-    private static final Pattern TTL = Pattern.compile("ttl[= ]([0-9]+)", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TTL = Pattern.compile("\\bttl\\s*(?:=\\s*|\\s+)([0-9]{1,3})\\b", Pattern.CASE_INSENSITIVE);
     private static Snapshot live = new Snapshot();
 
     /** Immutable per-request journal row; payloadBytes is ICMP data size selected by the user. */
