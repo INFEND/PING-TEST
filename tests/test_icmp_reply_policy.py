@@ -9,6 +9,12 @@ class IcmpReplyPolicyTests(unittest.TestCase):
     def test_exit_code_is_checked(self):
         self.assertIn("double[] parsed=(exitCode==0||receivedDespiteExitOne)", SERVICE)
         self.assertIn("boolean receivedDespiteExitOne=exitCode==1", SERVICE)
+    def test_exit_one_rejects_local_send_failures(self):
+        # A contradictory 1/1 summary must not override local send errors.
+        policy=SERVICE.split("boolean receivedDespiteExitOne=exitCode==1",1)[1].split("double[] parsed=",1)[0]
+        for diagnostic in ("sendto:", "sendmsg:", "socket:"):
+            with self.subTest(diagnostic=diagnostic):
+                self.assertIn('contains("'+diagnostic+'")',policy)
     def test_latency_only_on_valid_reply(self):
         self.assertIn("if(parsed!=null){rtt=parsed[0];replyTtl=(int)parsed[1];}", SERVICE)
     def test_ttl_only_on_confirmed_latency(self):
