@@ -9,7 +9,7 @@ SOURCE = (Path(__file__).resolve().parents[1] /
 
 class TtlParserTests(unittest.TestCase):
     def test_vendor_whitespace_and_boundary(self):
-        self.assertIn(r'\\bttl\\s*(?:=\\s*|\\s+)([0-9]{1,3})\\b', SOURCE)
+        self.assertIn(r'\\bttl\\s*(?:=\\s*|\\s+)([0-9]{1,3})(?![0-9\\w.,])', SOURCE)
         pattern = re.compile(r'\bttl\s*(?:=\s*|\s+)([0-9]{1,3})\b', re.I)
         for sample in ("ttl=64", "TTL = 64", "ttl 64", "ttl\t=\t64"):
             with self.subTest(sample=sample):

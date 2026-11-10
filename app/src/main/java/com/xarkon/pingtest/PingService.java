@@ -27,7 +27,7 @@ public final class PingService extends Service {
     private static final int ONGOING = 117, GRAPH = 118;
     private static final Object LOCK = new Object();
     private static final Pattern TIME = Pattern.compile("\\btime\\s*[=<]\\s*([0-9]+(?:[.,][0-9]+)?)(?![0-9.,eE+\\-\\w])", Pattern.CASE_INSENSITIVE);
-    private static final Pattern TTL = Pattern.compile("\\bttl\\s*(?:=\\s*|\\s+)([0-9]{1,3})\\b", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TTL = Pattern.compile("\\bttl\\s*(?:=\\s*|\\s+)([0-9]{1,3})(?![0-9\\w.,])", Pattern.CASE_INSENSITIVE);
     private static Snapshot live = new Snapshot();
 
     /** Immutable per-request journal row; payloadBytes is ICMP data size selected by the user. */
@@ -263,7 +263,8 @@ public final class PingService extends Service {
                 if(!Double.isFinite(latency)||(latency<0&&latency!=-2))continue;
                 Matcher ttl=TTL.matcher(line);
                 int replyTtl=-1;
-                if(ttl.find())try{replyTtl=Integer.parseInt(ttl.group(1));}
+                if(ttl.find())try{int parsedTtl=Integer.parseInt(ttl.group(1));
+                    if(parsedTtl>=1&&parsedTtl<=255)replyTtl=parsedTtl;}
                     catch(NumberFormatException ignored){}
                 return new double[]{latency,replyTtl};
             }catch(NumberFormatException ignored){}
