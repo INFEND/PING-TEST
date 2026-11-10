@@ -17,7 +17,7 @@ class IcmpReplyValidationTests(unittest.TestCase):
     def test_reply_requires_sequence_marker(self):
         # Toybox ping replies carry icmp_seq; a line containing only
         # 'bytes from <ip>' and 'time=' is not sufficient evidence.
-        self.assertIn(r"icmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1\\b", self.parser)
+        self.assertIn(r"icmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1(?![\\w.,])", self.parser)
         self.assertIn("TIME.matcher(line)", self.parser)
 
     def test_reply_requires_selected_address(self):
