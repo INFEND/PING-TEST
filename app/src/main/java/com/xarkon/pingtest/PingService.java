@@ -414,7 +414,7 @@ public final class PingService extends Service {
                 // contradiction only with an explicit positive one-packet summary,
                 // a matching ICMP reply and no evidence of local execution failure.
                 boolean receivedDespiteExitOne=exitCode==1
-                    && Pattern.compile("(?m)^\\\\s*1\\\\s+packets? transmitted,\\\\s*1\\\\s+(?:packets? )?received\\\\b",
+                    && Pattern.compile("(?m)^\\s*1\\s+packets? transmitted,\\s*1\\s+(?:packets? )?received\\b",
                         Pattern.CASE_INSENSITIVE).matcher(output).find()
                     && !isNetworkFailure(output) && !isDnsFailure(output)
                     && !output.toLowerCase(Locale.ROOT).contains("permission denied")
