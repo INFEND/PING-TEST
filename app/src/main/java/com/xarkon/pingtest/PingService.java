@@ -245,7 +245,7 @@ public final class PingService extends Service {
         // Some Android ping variants indent the echo reply. Permit only horizontal
         // indentation, never a newline or unrelated diagnostic prefix.
         Pattern reply=Pattern.compile("(?m)^[ \\t]*\\d+ bytes from "+quoted+
-            "(?:%[\\w.:-]+)?(?::|\\s)(?=[^\\r\\n]*\\bicmp_seq[= ]1\\b)[^\\r\\n]*$",Pattern.CASE_INSENSITIVE);
+            "(?:%[\\w.:-]+)?(?::|\\s)(?=[^\\r\\n]*\\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1\\b)[^\\r\\n]*$",Pattern.CASE_INSENSITIVE);
         Matcher lines=reply.matcher(output);
         while(lines.find()){
             String line=lines.group();
