@@ -30,7 +30,7 @@ class IcmpReplyValidationTests(unittest.TestCase):
 
     def test_expected_toybox_reply_shape(self):
         # Independent fixture documents the intended acceptance boundary.
-        pattern = re.compile(r"^\d+ bytes from 192\.0\.2\.7(?::|\s)(?=[^\r\n]*\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1\b)[^\r\n]*$", re.I)
+        pattern = re.compile(r"^\d+ bytes from 192\.0\.2\.7(?::|\s)(?=[^\r\n]*\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1(?![\w.,]))[^\r\n]*$", re.I)
         self.assertIsNotNone(pattern.match("64 bytes from 192.0.2.7: icmp_seq=1 ttl=64 time=12.4 ms"))
         self.assertIsNone(pattern.match("64 bytes from 192.0.2.7: time=12.4 ms"))
         self.assertIsNone(pattern.match("64 bytes from 192.0.2.8: icmp_seq=1 ttl=64 time=12.4 ms"))
