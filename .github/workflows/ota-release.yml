@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
     paths:
-      - 'PING_TEST_SOURCE.zip'
       # Release notes are committed LAST, after source, version index and tests.
       # Trigger on that final commit, not the earlier build.gradle bump.
       - 'release_notes/v*.txt'
@@ -25,27 +24,15 @@ jobs:
       - name: Check out project
         uses: actions/checkout@v4
 
-      - name: Import first Android source archive
+      - name: Verify checked-out Android sources
         shell: bash
         run: |
           set -euo pipefail
-          if [[ ! -f app/build.gradle ]]; then
-            test -s PING_TEST_SOURCE.zip || {
-              echo "::error::First upload PING_TEST_SOURCE.zip to the repository root."
-              exit 1
-            }
-            unzip -oq PING_TEST_SOURCE.zip
-            test -f app/build.gradle
-            test -f scripts/sign_release.py
-            test -f scripts/make_manifest.py
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -- app build.gradle settings.gradle gradle.properties scripts release_notes .gitignore README.md
-            if ! git diff --cached --quiet; then
-              git commit -m "chore: import PING TEST v1.5.0 Android source"
-              git push origin HEAD:main
-            fi
-          fi
+          test -s app/build.gradle
+          test -s scripts/sign_release.py
+          test -s scripts/make_manifest.py
+          test -s release_notes/versions.json
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
       - name: Check permanent signing secret
         env:
