@@ -13,7 +13,7 @@ assert r'\\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1(?![\\w.,])' in method
 
 def matches(output, address):
     pattern = re.compile(r"(?m)^[ \t]*\d+ bytes from " + re.escape(address)
-                         + r"(?:%[\w.:-]+)?(?::|\s)(?=[^\r\n]*\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1\b)[^\r\n]*$", re.I)
+                         + r"(?:%[\w.:-]+)?(?::|\s)(?=[^\r\n]*\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1(?![\w.,]))[^\r\n]*$", re.I)
     return bool(pattern.search(output))
 
 ip = "1.1.1.1"
