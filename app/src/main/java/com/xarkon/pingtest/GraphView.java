@@ -24,7 +24,9 @@ public final class GraphView extends View {
     public void setData(List<Float> values,int color,int background){
         float[] fresh=new float[values.size()];for(int i=0;i<fresh.length;i++)fresh[i]=values.get(i);
         if(Arrays.equals(points,fresh)&&accent==color&&bg==background)return;
-        boolean newSample=points.length>0&&fresh.length>0&&(fresh.length!=points.length||fresh[fresh.length-1]!=points[points.length-1]);
+        // A full rolling window can shift even when consecutive RTT values match.
+        // Compare the entire visible window so repeated RTTs still animate as new samples.
+        boolean newSample=points.length>0&&fresh.length>0&&!Arrays.equals(points,fresh);
         previous=points.length>0?points[points.length-1]:-1;
         // Keep the Y axis stable across incoming packets. A sudden high RTT
         // must still fit, while downward rescaling waits for a meaningful drop.
