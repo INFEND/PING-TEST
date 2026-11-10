@@ -421,7 +421,12 @@ public final class PingService extends Service {
                     && !output.toLowerCase(Locale.ROOT).contains("operation not permitted")
                     && !output.toLowerCase(Locale.ROOT).contains("unknown option")
                     && !output.toLowerCase(Locale.ROOT).contains("invalid option")
-                    && !output.toLowerCase(Locale.ROOT).contains("usage:");
+                    && !output.toLowerCase(Locale.ROOT).contains("usage:")
+                    // A received summary may coexist with a local send/socket error.
+                    // Do not turn such contradictory diagnostics into a successful RTT.
+                    && !output.toLowerCase(Locale.ROOT).contains("sendto:")
+                    && !output.toLowerCase(Locale.ROOT).contains("sendmsg:")
+                    && !output.toLowerCase(Locale.ROOT).contains("socket:");
                 double[] parsed=(exitCode==0||receivedDespiteExitOne)
                     ?parseIcmpReply(output,probeAddress):null;
                 if(parsed!=null){rtt=parsed[0];replyTtl=(int)parsed[1];}
