@@ -7,7 +7,7 @@ SOURCE = (Path(__file__).resolve().parents[1] / "app/src/main/java/com/xarkon/pi
 
 class PingExitStatusRegression(unittest.TestCase):
     def test_parse_reply_only_for_successful_exit(self):
-        self.assertRegex(SOURCE, r"exitCode\s*==\s*0\s*\?\s*parseIcmpReply")
+        self.assertRegex(SOURCE, r"double\[\] parsed=\(exitCode==0\|\|receivedDespiteExitOne\)")
 
     def test_local_exit_failure_is_diagnostic(self):
         self.assertIn('else error="Локальная ошибка ping (код "+exitCode+")";', SOURCE)

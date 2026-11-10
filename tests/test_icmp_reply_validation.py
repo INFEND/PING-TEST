@@ -24,9 +24,10 @@ class IcmpReplyValidationTests(unittest.TestCase):
         self.assertIn("Pattern.quote(expectedAddress)", self.parser)
         self.assertIn("Matcher lines=reply.matcher(output)", self.parser)
 
-    def test_failed_process_cannot_report_success(self):
-        self.assertIn("exitCode==0?parseIcmpReply(output,probeAddress):null",
-                      self.source)
+    def test_nonzero_exit_requires_explicit_confirmed_reply(self):
+        self.assertIn("double[] parsed=(exitCode==0||receivedDespiteExitOne)", self.source)
+        self.assertIn("boolean receivedDespiteExitOne=exitCode==1", self.source)
+        self.assertIn("&& !isNetworkFailure(output) && !isDnsFailure(output)", self.source)
 
     def test_expected_toybox_reply_shape(self):
         # Independent fixture documents the intended acceptance boundary.

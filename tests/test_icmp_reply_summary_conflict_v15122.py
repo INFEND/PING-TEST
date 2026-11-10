@@ -8,7 +8,7 @@ class ContradictoryReplyLossRegression(unittest.TestCase):
     def test_zero_received_summary_must_not_override_valid_echo(self):
         self.assertIn('exitCode==1&&isConfirmedNoReply(output)&&parseIcmpReply(output,probeAddress)==null', SOURCE)
         self.assertIn('else if(exitCode==1)error="Неоднозначный результат ping (код 1)"', SOURCE)
-        self.assertIn('double[] parsed=exitCode==0?parseIcmpReply(output,probeAddress):null;', SOURCE)
+        self.assertIn('double[] parsed=(exitCode==0||receivedDespiteExitOne)', SOURCE)
 
     def test_reply_parser_requires_selected_address_and_sequence(self):
         self.assertIn('Pattern.quote(expectedAddress)', SOURCE)

@@ -15,7 +15,7 @@ class PingClosedPipeCleanupTest(unittest.TestCase):
     def test_output_still_parsed_after_cleanup(self):
         src = SOURCE.read_text(encoding="utf-8")
         self.assertIn("synchronized(buffer){output=new String(buffer.toByteArray(),StandardCharsets.UTF_8);}", src)
-        self.assertIn("exitCode==0?parseIcmpReply(output,probeAddress):null", src)
+        self.assertIn("double[] parsed=(exitCode==0||receivedDespiteExitOne)", src)
 
 
 if __name__ == "__main__":

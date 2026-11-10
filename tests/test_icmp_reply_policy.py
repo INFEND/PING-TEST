@@ -7,7 +7,8 @@ SERVICE=(ROOT/"app/src/main/java/com/xarkon/pingtest/PingService.java").read_tex
 
 class IcmpReplyPolicyTests(unittest.TestCase):
     def test_exit_code_is_checked(self):
-        self.assertIn("exitCode==0?parseIcmpReply(output,probeAddress):null", SERVICE)
+        self.assertIn("double[] parsed=(exitCode==0||receivedDespiteExitOne)", SERVICE)
+        self.assertIn("boolean receivedDespiteExitOne=exitCode==1", SERVICE)
     def test_latency_only_on_valid_reply(self):
         self.assertIn("if(parsed!=null){rtt=parsed[0];replyTtl=(int)parsed[1];}", SERVICE)
     def test_ttl_only_on_confirmed_latency(self):

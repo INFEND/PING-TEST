@@ -18,7 +18,7 @@ class PingOutputDrainTests(unittest.TestCase):
         self.assertIn('reader.join(200);', SOURCE)
         self.assertIn('reader.join(1000);', SOURCE)
     def test_reply_parsed_after_reader_completion(self):
-        self.assertLess(SOURCE.index('reader.join(1000);'), SOURCE.index('exitCode==0?parseIcmpReply(output,probeAddress):null'))
+        self.assertLess(SOURCE.index('reader.join(1000);'), SOURCE.index('double[] parsed=(exitCode==0||receivedDespiteExitOne)'))
 
 if __name__ == "__main__":
     unittest.main()
