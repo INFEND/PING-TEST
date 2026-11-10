@@ -242,7 +242,9 @@ public final class PingService extends Service {
     private static double[] parseIcmpReply(String output,String expectedAddress){
         if(expectedAddress==null||expectedAddress.isEmpty())return null;
         String quoted=Pattern.quote(expectedAddress);
-        Pattern reply=Pattern.compile("(?m)^\\d+ bytes from "+quoted+
+        // Some Android ping variants indent the echo reply. Permit only horizontal
+        // indentation, never a newline or unrelated diagnostic prefix.
+        Pattern reply=Pattern.compile("(?m)^[ \\t]*\\d+ bytes from "+quoted+
             "(?:%[\\w.:-]+)?(?::|\\s)(?=[^\\r\\n]*\\bicmp_seq[= ]1\\b)[^\\r\\n]*$",Pattern.CASE_INSENSITIVE);
         Matcher lines=reply.matcher(output);
         while(lines.find()){
