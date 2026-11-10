@@ -4,7 +4,7 @@ import re
 import unittest
 
 SOURCE = (Path(__file__).resolve().parents[1] / "app/src/main/java/com/xarkon/pingtest/PingService.java").read_text(encoding="utf-8")
-SEQ = r"\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1\b"
+SEQ = r"\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1(?![\w.,])"
 
 class VendorSequenceSpacing(unittest.TestCase):
     def test_parser_uses_strict_sequence_one(self):
