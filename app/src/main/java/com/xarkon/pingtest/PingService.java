@@ -26,7 +26,7 @@ public final class PingService extends Service {
     private static final String CHANNEL = "ping_monitor_v1";
     private static final int ONGOING = 117, GRAPH = 118;
     private static final Object LOCK = new Object();
-    private static final Pattern TIME = Pattern.compile("\\btime[=<]\\s*([0-9]+(?:[.,][0-9]+)?)(?![0-9.,eE+\\-\\w])", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TIME = Pattern.compile("\\btime\\s*[=<]\\s*([0-9]+(?:[.,][0-9]+)?)(?![0-9.,eE+\\-\\w])", Pattern.CASE_INSENSITIVE);
     private static final Pattern TTL = Pattern.compile("ttl[= ]([0-9]+)", Pattern.CASE_INSENSITIVE);
     private static Snapshot live = new Snapshot();
 
@@ -254,7 +254,7 @@ public final class PingService extends Service {
                 // A bounded RTT is not an exact numeric measurement.
                 // Only a bound of <=1 ms proves the displayed '<1 ms' bucket.
                 // 'time<10' must not be fabricated as a sub-millisecond reply.
-                if(line.charAt(time.start()+4)=='<'){
+                if(line.substring(time.start(),time.start(1)).indexOf('<')>=0){
                     if(latency>1)continue;
                     latency=-2;
                 }
