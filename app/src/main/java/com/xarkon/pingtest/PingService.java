@@ -474,7 +474,11 @@ public final class PingService extends Service {
             ConnectivityManager commitCm=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
             Network commitNetwork=commitCm==null?null:commitCm.getActiveNetwork();
             VpnGuard.Route commitRoute=VpnGuard.route(this);
+            // Route inspection performs its own network lookup. A handover
+            // between these calls must not let a stale ICMP result through.
+            Network afterRouteNetwork=commitCm==null?null:commitCm.getActiveNetwork();
             routeChangedAtCommit=sessionNetwork==null||!sessionNetwork.equals(commitNetwork)||
+                !sessionNetwork.equals(afterRouteNetwork)||
                 (sessionRoute!=VpnGuard.Route.UNKNOWN&&commitRoute!=sessionRoute);
             if(!routeChangedAtCommit){
             live.done++;
