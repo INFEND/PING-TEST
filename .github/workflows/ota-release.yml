@@ -137,6 +137,18 @@ jobs:
             fi
           done
           # Verify the final release, not merely the local dist directory.
+          # Verify published bytes, not just asset names. On a retried run,
+          # an existing asset with the same name may contain different bytes.
+          # Refuse to call such a release successful or silently overwrite it.
+          for asset in PING-TEST.apk update.json; do
+            published_digest="$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" \
+              --jq ".assets[] | select(.name == \"$asset\") | .digest")"
+            local_digest="sha256:$(sha256sum "dist/$asset" | cut -d' ' -f1)"
+            if [[ "$published_digest" != "$local_digest" ]]; then
+              echo "::error::Published $asset SHA-256 differs from this build (or digest is unavailable)."
+              exit 1
+            fi
+          done
           for asset in PING-TEST.apk update.json; do
             gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json assets \
               --jq '.assets[].name' | grep -Fxq "$asset"
