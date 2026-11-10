@@ -7,7 +7,7 @@ source = Path("app/src/main/java/com/xarkon/pingtest/PingService.java").read_tex
 start = source.index("private static double[] parseIcmpReply(")
 end = source.index("\n    private static boolean isDnsFailure(", start)
 method = source[start:end]
-assert "if(line.charAt(time.start()+4)=='<')" in method
+assert "line.substring(time.start(),time.start(1)).indexOf('<')>=0" in method, "Bounded RTT must be detected across optional vendor whitespace"
 assert "if(latency>1)continue;" in method, "Loose upper bounds must not become <1 ms"
 assert "latency=-2;" in method
 
