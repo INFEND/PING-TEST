@@ -427,7 +427,16 @@ public final class PingService extends Service {
                     && !output.toLowerCase(Locale.ROOT).contains("sendto:")
                     && !output.toLowerCase(Locale.ROOT).contains("sendmsg:")
                     && !output.toLowerCase(Locale.ROOT).contains("socket:");
-                double[] parsed=(exitCode==0||receivedDespiteExitOne)
+                // Even exit code 0 can accompany a vendor-reported local send/socket
+                // failure. Such contradictory diagnostics must not publish RTT.
+                String diagnostics=output.toLowerCase(Locale.ROOT);
+                boolean localFailure=isNetworkFailure(output)||isDnsFailure(output)
+                    ||diagnostics.contains("sendto:")||diagnostics.contains("sendmsg:")
+                    ||diagnostics.contains("socket:")||diagnostics.contains("permission denied")
+                    ||diagnostics.contains("operation not permitted")
+                    ||diagnostics.contains("unknown option")||diagnostics.contains("invalid option")
+                    ||diagnostics.contains("usage:");
+                double[] parsed=((exitCode==0||receivedDespiteExitOne)&&!localFailure)
                     ?parseIcmpReply(output,probeAddress):null;
                 // A matching reply in a partial diagnostic stream is not enough to
                 // establish an unambiguous outcome: later bytes may contain
