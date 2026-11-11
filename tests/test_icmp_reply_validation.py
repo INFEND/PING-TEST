@@ -25,7 +25,7 @@ class IcmpReplyValidationTests(unittest.TestCase):
         self.assertIn("Matcher lines=reply.matcher(output)", self.parser)
 
     def test_nonzero_exit_requires_explicit_confirmed_reply(self):
-        self.assertIn("double[] parsed=(exitCode==0||receivedDespiteExitOne)", self.source)
+        self.assertIn("double[] parsed=((exitCode==0||receivedDespiteExitOne)&&!localFailure)", self.source)
         self.assertIn("boolean receivedDespiteExitOne=exitCode==1", self.source)
         self.assertIn("&& !isNetworkFailure(output) && !isDnsFailure(output)", self.source)
 
