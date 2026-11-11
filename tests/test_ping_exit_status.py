@@ -17,6 +17,12 @@ class PingExitStatusRegression(unittest.TestCase):
         self.assertIn('Pattern.compile("(?i)\\\\+\\\\s*[1-9]\\\\d*\\\\s+errors?\\\\b")', local_failure)
         self.assertIn("&&!localFailure", SOURCE)
 
+    def test_contradictory_zero_packet_summary_rejects_rtt(self):
+        local_failure = SOURCE.split("boolean localFailure=", 1)[1].split("double[] parsed=", 1)[0]
+        self.assertIn("0\\\\s+(?:packets? )?received", local_failure)
+        self.assertIn("0\\\\s+packets? transmitted", local_failure)
+        self.assertIn("&&!localFailure", SOURCE)
+
     def test_local_exit_failure_is_diagnostic(self):
         self.assertIn('else error="Локальная ошибка ping (код "+exitCode+")";', SOURCE)
 
