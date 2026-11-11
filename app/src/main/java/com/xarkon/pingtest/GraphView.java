@@ -61,7 +61,7 @@ public final class GraphView extends View {
     }
     @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);
         float[] animated=points;
-        if(points.length>0&&progress<1f&&previous>=0&&points[points.length-1]>=0){
+        if(points.length>0&&progress<1f&&Float.isFinite(previous)&&previous>=0&&Float.isFinite(points[points.length-1])&&points[points.length-1]>=0){
             System.arraycopy(points,0,animatedPoints,0,points.length);
             animated=animatedPoints;
             animated[points.length-1]=previous+(points[points.length-1]-previous)*progress;
@@ -102,6 +102,10 @@ public final class GraphView extends View {
         Path area=new Path();
         for(int i=0;i<v.length;i++){
             float x=v.length==1?left:left+i*spacing;
+            if(!Float.isFinite(v[i])){
+                // Malformed telemetry is unknown, never fabricate a loss or draw NaN coordinates.
+                continue;
+            }
             if(v[i]==-2f){
                 // A real reply bounded by "<1 ms", not a loss and not
                 // an invented 0 or 1 ms measurement. Hollow marker, no line.
@@ -120,7 +124,7 @@ public final class GraphView extends View {
             }
             float y=bottom-(bottom-top)*Math.min(1f,Math.max(0,v[i]/max));
             int color=QualityColors.rtt(v[i]);
-            if(i>0&&v[i-1]>=0){
+            if(i>0&&Float.isFinite(v[i-1])&&v[i-1]>=0){
                 float px=left+(i-1)*spacing;
                 float py=bottom-(bottom-top)*Math.min(1f,Math.max(0,v[i-1]/max));
                 area.rewind();area.moveTo(px,bottom);area.lineTo(px,py);area.lineTo(x,y);area.lineTo(x,bottom);area.close();
@@ -137,7 +141,7 @@ public final class GraphView extends View {
         // last successful reply incorrectly makes an older point look current
         // after a timeout or an unclassified ICMP error.
         int latest=v.length-1;
-        if(v[latest]>=0||v[latest]==-2f){
+        if(Float.isFinite(v[latest])&&(v[latest]>=0||v[latest]==-2f)){
             int i=latest;
             float x=v.length==1?left:left+i*spacing;
             if(v[i]==-2f){
