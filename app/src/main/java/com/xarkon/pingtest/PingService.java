@@ -435,7 +435,9 @@ public final class PingService extends Service {
                     ||diagnostics.contains("socket:")||diagnostics.contains("permission denied")
                     ||diagnostics.contains("operation not permitted")
                     ||diagnostics.contains("unknown option")||diagnostics.contains("invalid option")
-                    ||diagnostics.contains("usage:");
+                    ||diagnostics.contains("usage:")
+                    // Native send errors contradict a successful echo, even with exit 0.
+                    ||Pattern.compile("(?i)\\+\\s*[1-9]\\d*\\s+errors?\\b").matcher(output).find();
                 double[] parsed=((exitCode==0||receivedDespiteExitOne)&&!localFailure)
                     ?parseIcmpReply(output,probeAddress):null;
                 // A matching reply in a partial diagnostic stream is not enough to
