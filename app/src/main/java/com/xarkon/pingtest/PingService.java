@@ -437,7 +437,11 @@ public final class PingService extends Service {
                     ||diagnostics.contains("unknown option")||diagnostics.contains("invalid option")
                     ||diagnostics.contains("usage:")
                     // Native send errors contradict a successful echo, even with exit 0.
-                    ||Pattern.compile("(?i)\\+\\s*[1-9]\\d*\\s+errors?\\b").matcher(output).find();
+                    ||Pattern.compile("(?i)\\+\\s*[1-9]\\d*\\s+errors?\\b").matcher(output).find()
+                    // A zero-received or zero-transmitted native summary contradicts
+                    // an echo reply line. Never publish such an RTT.
+                    ||Pattern.compile("(?m)^\\s*(?:0\\s+packets? transmitted\\b|1\\s+packets? transmitted,\\s*0\\s+(?:packets? )?received\\b)",
+                        Pattern.CASE_INSENSITIVE).matcher(output).find();
                 double[] parsed=((exitCode==0||receivedDespiteExitOne)&&!localFailure)
                     ?parseIcmpReply(output,probeAddress):null;
                 // A matching reply in a partial diagnostic stream is not enough to
