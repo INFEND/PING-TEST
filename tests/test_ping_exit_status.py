@@ -21,6 +21,8 @@ class PingExitStatusRegression(unittest.TestCase):
         local_failure = SOURCE.split("boolean localFailure=", 1)[1].split("double[] parsed=", 1)[0]
         self.assertIn("0\\\\s+(?:packets? )?received", local_failure)
         self.assertIn("0\\\\s+packets? transmitted", local_failure)
+        self.assertIn("[1-9]\\\\d*\\\\s+packets? transmitted,\\\\s*0", local_failure)
+        self.assertNotIn("|1\\\\s+packets? transmitted,\\\\s*0", local_failure)
         self.assertIn("&&!localFailure", SOURCE)
 
     def test_local_exit_failure_is_diagnostic(self):
