@@ -10,6 +10,13 @@ class PingExitStatusRegression(unittest.TestCase):
         self.assertIn("double[] parsed=((exitCode==0||receivedDespiteExitOne)&&!localFailure)", SOURCE)
         self.assertIn("if(parsed!=null && !outputTruncated.get() && !outputReadFailed.get())", SOURCE)
 
+    def test_native_transmission_errors_reject_even_success_exit(self):
+        # The same vendor output can contain a valid echo and +N errors.
+        # RTT parsing must be gated on the native error summary.
+        local_failure = SOURCE.split("boolean localFailure=", 1)[1].split("double[] parsed=", 1)[0]
+        self.assertIn('Pattern.compile("(?i)\\\\+\\\\s*[1-9]\\\\d*\\\\s+errors?\\\\b")', local_failure)
+        self.assertIn("&&!localFailure", SOURCE)
+
     def test_local_exit_failure_is_diagnostic(self):
         self.assertIn('else error="Локальная ошибка ping (код "+exitCode+")";', SOURCE)
 
