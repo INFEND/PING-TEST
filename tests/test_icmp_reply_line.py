@@ -12,7 +12,7 @@ class IcmpReplyLinePolicy(unittest.TestCase):
         self.assertNotIn("TIME.matcher(output)",SOURCE)
         self.assertNotIn("TTL.matcher(output)",SOURCE)
     def test_nonzero_exit_requires_confirmed_received_reply(self):
-        self.assertIn("double[] parsed=(exitCode==0||receivedDespiteExitOne)",SOURCE)
+        self.assertIn("double[] parsed=((exitCode==0||receivedDespiteExitOne)&&!localFailure)",SOURCE)
         self.assertIn("boolean receivedDespiteExitOne=exitCode==1",SOURCE)
     def test_finite_nonnegative_latency(self):
         self.assertIn("Double.isFinite(latency)",SOURCE)
