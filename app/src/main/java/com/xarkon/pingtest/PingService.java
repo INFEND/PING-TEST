@@ -429,7 +429,13 @@ public final class PingService extends Service {
                     && !output.toLowerCase(Locale.ROOT).contains("socket:");
                 double[] parsed=(exitCode==0||receivedDespiteExitOne)
                     ?parseIcmpReply(output,probeAddress):null;
-                if(parsed!=null){rtt=parsed[0];replyTtl=(int)parsed[1];}
+                // A matching reply in a partial diagnostic stream is not enough to
+                // establish an unambiguous outcome: later bytes may contain
+                // a local send failure or a contradictory packet summary.
+                // Classify this as a local diagnostic error, never packet loss.
+                if(parsed!=null && !outputTruncated.get() && !outputReadFailed.get()){
+                    rtt=parsed[0];replyTtl=(int)parsed[1];
+                }
                 if(rtt<0&&rtt!=-2){
                     // A vendor may emit more than the bounded 8 KiB capture.
                     // Missing reply text in truncated diagnostics is not evidence of packet loss.
