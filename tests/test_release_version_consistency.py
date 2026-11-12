@@ -24,6 +24,13 @@ class ReleaseVersionConsistency(unittest.TestCase):
                         "Current version has no visible release notes")
 
 
+    def test_queued_icmp_route_notes_are_visible(self):
+        notes = ROOT / "release_notes/v1.5.160.txt"
+        entries = [line.lstrip() for line in notes.read_text(encoding="utf-8").splitlines()
+                   if line.lstrip().startswith(("• ", "[+] ", "[-] ", "[=] "))]
+        self.assertTrue(any("ICMP" in line and "VPN" in line for line in entries),
+                        "Queued ICMP route changes must remain visible in cumulative OTA notes")
+
     def test_unpublished_graph_scale_notes_are_visible(self):
         notes = ROOT / "release_notes/v1.5.148.txt"
         entries = [line.lstrip() for line in notes.read_text(encoding="utf-8").splitlines()
