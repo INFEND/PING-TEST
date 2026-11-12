@@ -23,12 +23,15 @@ public class ConnectivityManager {
  public Network network;
  public NetworkCapabilities caps;
  public boolean fail;
+ public boolean switchDuringLookup;
+ public Network replacement;
  public Network getActiveNetwork() {
   if (fail) throw new SecurityException();
   return network;
  }
  public NetworkCapabilities getNetworkCapabilities(Network n) {
   if (n != network) throw new AssertionError("wrong network");
+  if (switchDuringLookup) network = replacement;
   return caps;
  }
 }""",
@@ -69,6 +72,20 @@ public class RouteHarness {
   cm.caps.transports = 0;
   cm.caps.notVpn = true;
   check(c, VpnGuard.Route.DIRECT);
+  // A stale VPN capability must not trigger a warning after a handover.
+  cm.caps.transports = 1 << NetworkCapabilities.TRANSPORT_VPN;
+  cm.switchDuringLookup = true;
+  cm.replacement = new Network();
+  if (VpnGuard.route(c) != VpnGuard.Route.UNKNOWN) throw new AssertionError("stale VPN");
+  cm.network = new Network();
+  if (VpnGuard.active(c)) throw new AssertionError("false VPN warning");
+  cm.network = new Network();
+  cm.caps.transports = 1 << NetworkCapabilities.TRANSPORT_WIFI;
+  if (VpnGuard.route(c) != VpnGuard.Route.UNKNOWN) throw new AssertionError("stale direct");
+  cm.network = new Network();
+  cm.replacement = null;
+  if (VpnGuard.route(c) != VpnGuard.Route.UNKNOWN) throw new AssertionError("lost network");
+  cm.switchDuringLookup = false;
   cm.fail = true;
   check(c, VpnGuard.Route.UNKNOWN);
  }

@@ -25,7 +25,9 @@ public final class VpnGuard {
             Network network=cm.getActiveNetwork();
             if(network==null)return Route.UNKNOWN;
             NetworkCapabilities caps=cm.getNetworkCapabilities(network);
-            if(caps==null)return Route.UNKNOWN;
+            // Capabilities may belong to a network that stopped being the UID default
+            // while the lookup was in progress. Do not publish a stale VPN badge.
+            if(caps==null || !network.equals(cm.getActiveNetwork()))return Route.UNKNOWN;
             if(caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN))
                 return Route.VPN;
             // A physical/non-VPN default network means that PING TEST does NOT
