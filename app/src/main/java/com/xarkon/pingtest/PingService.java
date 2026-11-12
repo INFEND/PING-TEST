@@ -83,6 +83,15 @@ public final class PingService extends Service {
     /** Monitor needs the chart and at most four recent probes, never the full log. */
     public static Snapshot monitorSnapshot(){synchronized(LOCK){return live.copy(false);}}
 
+    /** Notifications use statistics, chart and the last log line, not full history. */
+    private static Snapshot notificationSnapshot(){
+        synchronized(LOCK){
+            Snapshot s=live.copy(false);
+            if(!live.log.isEmpty())s.log.add(live.log.get(live.log.size()-1));
+            return s;
+        }
+    }
+
     /** Copy only journal data, and only when its session or tail changed. */
     public static Snapshot journalSnapshot(long sessionId, ProbeEvent tail, boolean emptyView) {
         synchronized(LOCK){
@@ -151,7 +160,7 @@ public final class PingService extends Service {
         }
         stopping=false; address="";sessionNetwork=null;
         final long expectedRun=live.id;runId=expectedRun;
-        startForeground(ONGOING,makeNotification(snapshot()));
+        startForeground(ONGOING,makeNotification(notificationSnapshot()));
         acquireLocks();
         workers=new ThreadPoolExecutor(20,20,0L,TimeUnit.MILLISECONDS,new SynchronousQueue<Runnable>(), r->{Thread t=new Thread(r,"PingProbe");t.setDaemon(true);return t;});
         clock=Executors.newSingleThreadScheduledExecutor(r->{Thread t=new Thread(r,"PingClock");t.setDaemon(true);return t;});
@@ -648,7 +657,7 @@ public final class PingService extends Service {
         return b.build();
     }
     private void refreshNotification(boolean force){
-        Snapshot s=snapshot();long now=SystemClock.elapsedRealtime();
+        Snapshot s=notificationSnapshot();long now=SystemClock.elapsedRealtime();
         if(!s.active || !AppPrefs.bool(this,"notifications",true)){
             // A foreground service must still keep its mandatory ongoing notification.
             if(force||now-lastNotify>=3000){notify.notify(ONGOING,makeNotification(s));lastNotify=now;}
