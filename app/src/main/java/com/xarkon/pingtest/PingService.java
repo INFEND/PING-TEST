@@ -250,6 +250,13 @@ public final class PingService extends Service {
             finishRun(scheduledRun,"Сеть приложения изменилась. Начните новую проверку.");return;
         }
         VpnGuard.Route currentRoute=VpnGuard.route(this);
+        // Route classification performs another network lookup. Reject a handover
+        // during that lookup before reserving a packet in the scheduler.
+        Network afterTickRoute=cm==null?null:cm.getActiveNetwork();
+        if(stopping || scheduledRun!=runId)return;
+        if(!initialNetwork.equals(afterTickRoute)){
+            finishRun(scheduledRun,"Сеть приложения изменилась. Начните новую проверку.");return;
+        }
         if(currentRoute!=VpnGuard.Route.UNKNOWN&&sessionRoute!=VpnGuard.Route.UNKNOWN
             &&currentRoute!=sessionRoute){
             finishRun(scheduledRun,"Сеть по умолчанию изменилась. Начните новую проверку.");return;
