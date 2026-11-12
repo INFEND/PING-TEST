@@ -393,6 +393,20 @@ public final class PingService extends Service {
     }
 
     private void probe(int seq,long capturedRun,String probeAddress,int probeBytes,int probeTtl,int probeTimeout){
+        // Queued work can outlive a session or a network handover.
+        if(stopping || capturedRun!=runId)return;
+        ConnectivityManager launchCm=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+        Network launchNetwork=launchCm==null?null:launchCm.getActiveNetwork();
+        Network launchExpected=sessionNetwork;
+        VpnGuard.Route launchRoute=VpnGuard.route(this);
+        Network launchAfter=launchCm==null?null:launchCm.getActiveNetwork();
+        if(stopping || capturedRun!=runId)return;
+        if(launchExpected==null || !launchExpected.equals(launchNetwork) ||
+            !launchExpected.equals(launchAfter) ||
+            (sessionRoute!=VpnGuard.Route.UNKNOWN && launchRoute!=sessionRoute)){
+            finishRun(capturedRun,"Сеть приложения изменилась перед запуском ICMP. Начните новую проверку.");
+            return;
+        }
         double rtt=-1;int replyTtl=-1;String error="";
         java.lang.Process process=null;
         try{
