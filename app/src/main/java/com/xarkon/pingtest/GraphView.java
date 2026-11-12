@@ -124,6 +124,14 @@ public final class GraphView extends View {
             }
             float y=bottom-(bottom-top)*Math.min(1f,Math.max(0,v[i]/max));
             int color=QualityColors.rtt(v[i]);
+            // A measured reply between gaps has no connecting segment.
+            // Keep it visible even after a newer sample arrives.
+            boolean connectedBefore=i>0&&Float.isFinite(v[i-1])&&v[i-1]>=0;
+            boolean connectedAfter=i+1<v.length&&Float.isFinite(v[i+1])&&v[i+1]>=0;
+            if(i<v.length-1&&!connectedBefore&&!connectedAfter){
+                p.setStyle(Paint.Style.FILL);p.setColor(color);
+                c.drawCircle(x,y,Math.max(1.5f,2.2f*density),p);
+            }
             if(i>0&&Float.isFinite(v[i-1])&&v[i-1]>=0){
                 float px=left+(i-1)*spacing;
                 float py=bottom-(bottom-top)*Math.min(1f,Math.max(0,v[i-1]/max));
