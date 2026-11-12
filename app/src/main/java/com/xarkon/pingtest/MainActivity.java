@@ -279,7 +279,7 @@ public final class MainActivity extends Activity {
             ip.setText(VpnGuard.statusText(this));
             last.update(-1,false,false);avg.update(-1,false,false);failed.update(-1,false,false);
             if(qualityState!=null){qualityState.setText("ОЖИДАНИЕ");qualityState.setTextColor(QualityColors.UNKNOWN);}
-            sendText.update(0,0,false);
+            sendText.update(0,0,0,false);
             bestText.setText("—");middleText.setText("—");maxText.setText("—");
             bestText.setTextColor(QualityColors.UNKNOWN);
             middleText.setTextColor(QualityColors.UNKNOWN);
@@ -301,15 +301,14 @@ public final class MainActivity extends Activity {
             "● "+routeLabelFromInfo(s.vpnInfo)):
             VpnGuard.statusText(this));
         last.update(s.last,false,sameSession);avg.update(s.avg(),false,sameSession);
-        boolean unusable=s.ok==0&&s.lost==0&&!s.error.isEmpty();
-        failed.update(s.sent==0||unusable?-1:s.lossPct(),true,sameSession);
+        failed.update(s.ok+s.lost==0?-1:s.lossPct(),true,sameSession);
         if(qualityState!=null){
             double ms=s.last==-2?0.5:s.last>=0?s.last:s.avg();
             qualityState.setText(ms<0?(s.lost>0?"НЕТ ОТВЕТА":"ОЖИДАНИЕ"):
                 ms<=45?"ОТЛИЧНО":ms<=110?"СТАБИЛЬНО":ms<=240?"ПОВЫШЕННАЯ":"ВЫСОКАЯ");
             qualityState.setTextColor(ms<0?(s.lost>0?QualityColors.RED:QualityColors.UNKNOWN):QualityColors.rtt(ms));
         }
-        sendText.update(s.ok,s.sent,sameSession);
+        sendText.update(s.ok,s.sent,s.lost,sameSession);
         bestText.setText(s.timed==0?"—":fmt(s.min)+" мс");
         bestText.setTextColor(s.timed==0?QualityColors.UNKNOWN:QualityColors.rtt(s.min));
         middleText.setText(s.timed==0?"—":fmt(s.avg())+" мс");
@@ -1081,7 +1080,7 @@ public final class MainActivity extends Activity {
     /** Exact packet counts with a smooth quality-color transition. */
     private final class ReplyMetric extends TextView {
         private ValueAnimator animator;
-        private int targetOk=-1,targetSent=-1;
+        private int targetOk=-1,targetSent=-1,targetLost=-1;
         ReplyMetric(){
             super(MainActivity.this);
             setText("0 / 0");setTextColor(QualityColors.UNKNOWN);setTextSize(20);
@@ -1089,14 +1088,14 @@ public final class MainActivity extends Activity {
             setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
             setFontFeatureSettings("tnum");
         }
-        void update(int ok,int sent,boolean animate){
+        void update(int ok,int sent,int lost,boolean animate){
             ok=Math.max(0,ok);sent=Math.max(ok,sent);
-            if(ok==targetOk&&sent==targetSent&&animate&&AppPrefs.bool(MainActivity.this,"motion",true))return;
+            if(ok==targetOk&&sent==targetSent&&lost==targetLost&&animate&&AppPrefs.bool(MainActivity.this,"motion",true))return;
             if(animator!=null)animator.cancel();
             final int nextOk=ok,nextSent=sent;
             final int startColor=getCurrentTextColor();
-            final int finishColor=nextSent==0?QualityColors.UNKNOWN:QualityColors.success(nextOk,nextSent);
-            targetOk=nextOk;targetSent=nextSent;
+            final int finishColor=QualityColors.success(nextOk,nextOk+lost);
+            targetOk=nextOk;targetSent=nextSent;targetLost=lost;
             setText(nextOk+" / "+nextSent);
             if(!animate||!AppPrefs.bool(MainActivity.this,"motion",true)){
                 setTextColor(finishColor);return;
