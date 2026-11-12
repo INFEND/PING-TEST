@@ -596,6 +596,7 @@ public final class PingService extends Service {
         String content=s.sent==0?"Подключение к узлу…":
                 String.format(Locale.US,"%s · %d/%d завершено · %s · потери %.1f%%",
                     routeLabel,s.ok,classified,s.timed>0?String.format(Locale.US,"%.0f мс",s.avg()):s.ok>0?"<1 мс":"ожидание",s.lossPct());
+        if(s.sent>0&&classified==0)content=routeLabel+" · ожидание · потери —";
         if(!s.error.isEmpty())content=s.error;
         else if(!s.warning.isEmpty())content=s.warning;
         if(s.ok==0&&s.lost>0&&s.error.isEmpty())content="0 / "+(s.ok+s.lost)+" • ответов нет";

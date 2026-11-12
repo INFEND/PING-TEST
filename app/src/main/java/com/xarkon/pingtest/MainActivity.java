@@ -748,12 +748,18 @@ public final class MainActivity extends Activity {
             final int historyIndex=i;
             LinearLayout card=Ui.panel(this);LinearLayout r=Ui.horizontal(this);
             r.addView(Ui.text(this,o.optString("label",TargetStore.friendly(this,o.optString("host","—"))),17,Ui.fg(),true),new LinearLayout.LayoutParams(0,-2,1));
-            boolean good=o.optInt("ok")>0;TextView m=Ui.text(this,good?fmt(o.optDouble("avg"))+" мс":"НЕТ ОТВЕТА",12,
-                good?QualityColors.rtt(o.optDouble("avg")):QualityColors.RED,true);r.addView(m);
+            boolean good=o.optInt("ok")>0;
+            boolean timed=good&&o.optDouble("avg",-1)>=0;
+            boolean confirmedLoss=o.has("lost")?o.optInt("lost")>0:(o.has("done")?o.optInt("done"):o.optInt("sent"))>0;
+            TextView m=Ui.text(this,good?(timed?fmt(o.optDouble("avg"))+" мс":"<1 мс"):confirmedLoss?"НЕТ ОТВЕТА":"НЕТ ДАННЫХ",12,
+                good?QualityColors.rtt(timed?o.optDouble("avg"):0.5):confirmedLoss?QualityColors.RED:QualityColors.UNKNOWN,true);r.addView(m);
             card.addView(r);
             int sent=o.optInt("sent");int lost=o.optInt("lost");
             int completed=o.has("done")?o.optInt("done"):sent;
-            double percent=completed==0?0:100.0*Math.max(0,completed-o.optInt("ok"))/completed;
+            int ok=Math.max(0,o.optInt("ok"));
+            lost=o.has("lost")?Math.max(0,lost):Math.max(0,completed-ok);
+            completed=ok+lost;
+            double percent=completed==0?0:100.0*lost/completed;
             // Independent chips keep loss severity separate from the UID route status.
             LinearLayout badges=Ui.horizontal(this);
             TextView lossLabel=Ui.chip(this,"ПОТЕРИ  "+(completed==0?"—":fmt(percent)+"%"),false);
@@ -787,7 +793,8 @@ public final class MainActivity extends Activity {
     private void historyDetails(JSONObject obj){
         int sent=obj.optInt("sent"),ok=obj.optInt("ok");
         int completed=Math.max(0,obj.has("done")?obj.optInt("done"):sent);
-        int lost=Math.max(0,completed-ok);
+        int lost=obj.has("lost")?Math.max(0,obj.optInt("lost")):Math.max(0,completed-ok);
+        completed=Math.max(0,ok)+lost;
         String method=obj.optString("method","ICMP");
         String label=obj.optString("label",TargetStore.friendly(this,obj.optString("host")));
         String rawLog=obj.optString("log","");
