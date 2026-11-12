@@ -23,9 +23,9 @@ class BoundedGraphOutcomeTests(unittest.TestCase):
         self.assertIn("QualityColors.RED",GRAPH[lost:lost+260])
 
     def test_no_fabricated_line_between_bounded_and_exact(self):
-        self.assertIn("if(i>0&&v[i-1]>=0)",GRAPH)
+        self.assertIn("if(i>0&&Float.isFinite(v[i-1])&&v[i-1]>=0)",GRAPH)
         self.assertIn("int latest=v.length-1;",GRAPH)
-        self.assertIn("if(v[latest]>=0||v[latest]==-2f)",GRAPH)
+        self.assertIn("if(Float.isFinite(v[latest])&&(v[latest]>=0||v[latest]==-2f))",GRAPH)
         self.assertIn("int i=latest;",GRAPH)
         self.assertNotIn("for(int i=v.length-1;i>=0;i--)",GRAPH)
         self.assertNotIn("if(v[i]>=0||v[i]==-2f)",GRAPH)

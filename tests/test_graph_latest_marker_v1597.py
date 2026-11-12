@@ -6,7 +6,7 @@ class LatestMarker(unittest.TestCase):
     def test_only_latest_success_is_emphasized(self):
         drawing=SOURCE.split("private static void renderWithScale(",1)[1]
         self.assertIn("int latest=v.length-1;",drawing)
-        self.assertIn("if(v[latest]>=0||v[latest]==-2f)",drawing)
+        self.assertIn("if(Float.isFinite(v[latest])&&(v[latest]>=0||v[latest]==-2f))",drawing)
         self.assertNotIn("for(int i=v.length-1;i>=0;i--)if(v[i]>=0||v[i]==-2f)",drawing)
     def test_bounded_rtt_is_not_loss(self):
         self.assertIn("if(v[i]==-2f)",SOURCE)
