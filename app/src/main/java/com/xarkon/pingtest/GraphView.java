@@ -20,6 +20,7 @@ public final class GraphView extends View {
     private int accent=0xff55dfcb,bg=0xff0b0b0d;
     private ValueAnimator animator;
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path fillPath=new Path();
     public GraphView(Context c){super(c);}
     public void setData(List<Float> values,int color,int background){
         float[] fresh=new float[values.size()];for(int i=0;i<fresh.length;i++)fresh[i]=values.get(i);
@@ -66,7 +67,7 @@ public final class GraphView extends View {
             animated=animatedPoints;
             animated[points.length-1]=previous+(points[points.length-1]-previous)*progress;
         }
-        renderWithScale(canvas,getWidth(),getHeight(),animated,accent,bg,displayMax);
+        renderWithScale(canvas,getWidth(),getHeight(),animated,accent,bg,displayMax,paint,fillPath);
     }
     /** Fixed autoscale for exports and screenshots, independent of live animations. */
     public static void render(Canvas c,int w,int h,float[] v,int accent,int background){
@@ -80,8 +81,13 @@ public final class GraphView extends View {
         return Math.max(3f,step*3f);
     }
     private static void renderWithScale(Canvas c,int w,int h,float[] v,int accent,int background,float scale){
+        renderWithScale(c,w,h,v,accent,background,scale,new Paint(Paint.ANTI_ALIAS_FLAG),new Path());
+    }
+    private static void renderWithScale(Canvas c,int w,int h,float[] v,int accent,int background,float scale,Paint p,Path area){
         if(w<=0||h<=0)return;
-        Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
+        // Live drawing reuses scratch objects; reset state left by the previous frame.
+        p.reset();p.setAntiAlias(true);
+        area.rewind();
         c.drawColor(background);
         float density=h/145f;
         float left=38*density,right=w-13*density,top=15*density,bottom=h-23*density;
@@ -99,7 +105,6 @@ public final class GraphView extends View {
         float spacing=v.length>1?(right-left)/(v.length-1):0;
         // Reuse the fill path across up to 500 samples instead of allocating
         // hundreds of short-lived Path objects on every animation frame.
-        Path area=new Path();
         for(int i=0;i<v.length;i++){
             float x=v.length==1?left:left+i*spacing;
             if(!Float.isFinite(v[i])){

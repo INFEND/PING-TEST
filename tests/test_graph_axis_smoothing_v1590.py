@@ -8,7 +8,7 @@ class ChartScaleTests(unittest.TestCase):
         self.assertIn("required>displayMax?required",SOURCE)
     def test_scale_animated_with_frame_progress(self):
         self.assertIn("displayMax=scaleStart+(scaleTarget-scaleStart)*progress",SOURCE)
-        self.assertIn("renderWithScale(canvas,getWidth(),getHeight(),animated,accent,bg,displayMax)",SOURCE)
+        self.assertIn("renderWithScale(canvas,getWidth(),getHeight(),animated,accent,bg,displayMax,paint,fillPath)",SOURCE)
         self.assertIn("displayMax=scaleTarget",SOURCE)
     def test_static_export_remains_deterministic(self):
         self.assertIn("renderWithScale(c,w,h,v,accent,background,axisMaximum(v))",SOURCE)
