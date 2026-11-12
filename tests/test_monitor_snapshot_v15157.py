@@ -8,7 +8,8 @@ MAIN = (ROOT / "MainActivity.java").read_text(encoding="utf-8")
 class MonitorSnapshot(unittest.TestCase):
     def test_monitor_uses_bounded_copy(self):
         self.assertIn("monitorSnapshot(){synchronized(LOCK){return live.copy(false);}}", SERVICE)
-        self.assertIn("PingService.Snapshot s=PingService.monitorSnapshot();refreshStatus(s);", MAIN)
+        self.assertIn("PingService.monitorSnapshot(seenSession,renderedVersion,selectedHost)", MAIN)
+        self.assertIn("if(s==null)return;", MAIN)
 
     def test_full_history_unchanged(self):
         self.assertIn("public Snapshot copy(){return copy(true);}", SERVICE)

@@ -83,6 +83,15 @@ public final class PingService extends Service {
     /** Monitor needs the chart and at most four recent probes, never the full log. */
     public static Snapshot monitorSnapshot(){synchronized(LOCK){return live.copy(false);}}
 
+    /** Skip unchanged monitor frames atomically; a different idle target must still render. */
+    public static Snapshot monitorSnapshot(long sessionId,long version,String selectedHost){
+        synchronized(LOCK){
+            if(live.id==sessionId && live.version==version &&
+                    (live.active || live.host.equals(selectedHost)))return null;
+            return live.copy(false);
+        }
+    }
+
     /** Notifications use statistics, chart and the last log line, not full history. */
     private static Snapshot notificationSnapshot(){
         synchronized(LOCK){

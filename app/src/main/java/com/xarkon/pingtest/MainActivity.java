@@ -274,8 +274,11 @@ public final class MainActivity extends Activity {
         return value;
     }
     private void refreshPing(){if(tab!=0||go==null)return;
-        PingService.Snapshot s=PingService.monitorSnapshot();refreshStatus(s);
-        if(!s.active && !s.host.equals(TargetStore.selected(this).host)){
+        String selectedHost=TargetStore.selected(this).host;
+        PingService.Snapshot s=PingService.monitorSnapshot(seenSession,renderedVersion,selectedHost);
+        if(s==null)return;
+        refreshStatus(s);
+        if(!s.active && !s.host.equals(selectedHost)){
             ip.setText(VpnGuard.statusText(this));
             last.update(-1,false,false);avg.update(-1,false,false);failed.update(-1,false,false);
             if(qualityState!=null){qualityState.setText("ОЖИДАНИЕ");qualityState.setTextColor(QualityColors.UNKNOWN);}
