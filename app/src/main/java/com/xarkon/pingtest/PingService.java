@@ -70,6 +70,21 @@ public final class PingService extends Service {
     }
     public static Snapshot snapshot() { synchronized(LOCK){return live.copy();} }
 
+    /** Copy only journal data, and only when its session or tail changed. */
+    public static Snapshot journalSnapshot(long sessionId, ProbeEvent tail, boolean emptyView) {
+        synchronized(LOCK){
+            int size=live.events.size();
+            if(live.id==sessionId){
+                if(size==0 && tail==null && emptyView)return null;
+                if(size>0 && tail==live.events.get(size-1))return null;
+            }
+            Snapshot s=new Snapshot();
+            s.id=live.id;
+            s.events.addAll(live.events);
+            return s;
+        }
+    }
+
     private ScheduledExecutorService clock;
     private ThreadPoolExecutor workers;
     // Track active native ping processes so STOP can terminate them immediately.

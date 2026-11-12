@@ -700,7 +700,8 @@ public final class MainActivity extends Activity {
     }
     private void refreshJournal(){
         if(journalRows==null||journalScroll==null)return;
-        PingService.Snapshot snapshot=PingService.snapshot();
+        PingService.Snapshot snapshot=PingService.journalSnapshot(journalSessionId,journalTail,journalRows.getChildCount()==0);
+        if(snapshot==null)return;
         List<PingService.ProbeEvent> records=snapshot.events;
         // Most refreshes see no new events. Avoid scanning the entire journal or rebuilding an empty one.
         if(snapshot.id==journalSessionId){
