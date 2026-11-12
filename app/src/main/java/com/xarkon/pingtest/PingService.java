@@ -59,16 +59,29 @@ public final class PingService extends Service {
          * not evidence of packet loss. */
         public double lossPct(){int classified=ok+lost;return classified==0?0:100.0*lost/classified;}
         public double jitter(){return jitterCount==0?0:jitterTotal/jitterCount;}
-        public Snapshot copy(){
+        public Snapshot copy(){return copy(true);}
+        private Snapshot copy(boolean full){
             Snapshot s=new Snapshot();
             s.active=active;s.id=id;s.host=host;s.label=label;s.ip=ip;s.error=error;s.method=method;s.route=route;s.vpnInfo=vpnInfo;s.warning=warning;s.port=port;s.version=version;s.planned=planned;
             s.sent=sent;s.done=done;s.ok=ok;s.lost=lost;s.skipped=skipped;s.ttl=ttl;
             s.limit=limit;s.intervalMs=intervalMs;s.chartLimit=chartLimit;s.last=last;s.min=min;s.max=max;
             s.total=total;s.previous=previous;s.jitterTotal=jitterTotal;s.jitterCount=jitterCount;s.timed=timed;
-            s.started=started;s.chart.addAll(chart);s.log.addAll(log);s.events.addAll(events);return s;
+            s.started=started;s.chart.addAll(chart);
+            if(full){s.log.addAll(log);s.events.addAll(events);}
+            else {
+                for(int i=events.size()-1;i>=0&&s.events.size()<4;i--){
+                    ProbeEvent e=events.get(i);
+                    if(e.number>0)s.events.add(0,e);
+                }
+                if(s.events.isEmpty()&&!events.isEmpty())s.events.add(events.get(events.size()-1));
+            }
+            return s;
         }
     }
     public static Snapshot snapshot() { synchronized(LOCK){return live.copy();} }
+
+    /** Monitor needs the chart and at most four recent probes, never the full log. */
+    public static Snapshot monitorSnapshot(){synchronized(LOCK){return live.copy(false);}}
 
     /** Copy only journal data, and only when its session or tail changed. */
     public static Snapshot journalSnapshot(long sessionId, ProbeEvent tail, boolean emptyView) {
