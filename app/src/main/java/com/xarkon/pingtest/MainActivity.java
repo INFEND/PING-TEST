@@ -1078,11 +1078,9 @@ public final class MainActivity extends Activity {
         row.addView(sw);sw.setOnCheckedChangeListener((v,checked)->{AppPrefs.put(this,key,checked);if(key.equals("amoled"))redrawSettings();});
         row.setOnClickListener(v->sw.setChecked(!sw.isChecked()));p.addView(row,Ui.margins(-1,-2,0,13));
     }
-    // Smooth numeric *and color* interpolation, preserving green/yellow/red quality bands.
-    /** Same 195 ms interpolated motion as RTT, without sliding or blinking text. */
+    /** Exact packet counts with a smooth quality-color transition. */
     private final class ReplyMetric extends TextView {
         private ValueAnimator animator;
-        private double shownOk=0,shownSent=0;
         private int targetOk=-1,targetSent=-1;
         ReplyMetric(){
             super(MainActivity.this);
@@ -1093,25 +1091,21 @@ public final class MainActivity extends Activity {
         }
         void update(int ok,int sent,boolean animate){
             ok=Math.max(0,ok);sent=Math.max(ok,sent);
-            if(ok==targetOk&&sent==targetSent)return;
+            if(ok==targetOk&&sent==targetSent&&animate&&AppPrefs.bool(MainActivity.this,"motion",true))return;
             if(animator!=null)animator.cancel();
             final int nextOk=ok,nextSent=sent;
-            final double fromOk=shownOk,fromSent=shownSent;
             final int startColor=getCurrentTextColor();
             final int finishColor=nextSent==0?QualityColors.UNKNOWN:QualityColors.success(nextOk,nextSent);
             targetOk=nextOk;targetSent=nextSent;
+            setText(nextOk+" / "+nextSent);
             if(!animate||!AppPrefs.bool(MainActivity.this,"motion",true)){
-                shownOk=nextOk;shownSent=nextSent;
-                setText(nextOk+" / "+nextSent);setTextColor(finishColor);return;
+                setTextColor(finishColor);return;
             }
             ValueAnimator change=ValueAnimator.ofFloat(0f,1f);animator=change;
             change.setDuration(195);
             change.setInterpolator(new DecelerateInterpolator(1.2f));
             change.addUpdateListener(a->{
                 float progress=(Float)a.getAnimatedValue();
-                shownOk=fromOk+(nextOk-fromOk)*progress;
-                shownSent=fromSent+(nextSent-fromSent)*progress;
-                setText(Math.round(shownOk)+" / "+Math.round(shownSent));
                 setTextColor(QualityColors.blend(startColor,finishColor,progress));
             });
             change.start();
