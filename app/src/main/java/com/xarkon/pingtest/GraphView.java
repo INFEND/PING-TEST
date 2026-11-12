@@ -38,6 +38,11 @@ public final class GraphView extends View {
             scaleStart=displayMax;
             scaleTarget=required>displayMax?required:
                 required<displayMax*.70f?required:displayMax;
+            // Expand immediately so the new spike fits from the first frame.
+            if(required>displayMax){
+                displayMax=required;
+                scaleStart=required;
+            }
         }
         points=fresh;
         // Resize only when the sample window length changes, not on each frame.
