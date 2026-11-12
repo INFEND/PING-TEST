@@ -1126,17 +1126,18 @@ public final class MainActivity extends Activity {
             setIncludeFontPadding(false);setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));setSingleLine(true);}
         private int quality(double v){return kind==1?QualityColors.loss(v):QualityColors.rtt(v);}
         void update(double next,boolean percent,boolean animate){
-            if(Double.compare(target,next)==0)return;
+            if(Double.compare(target,next)==0&&animate&&AppPrefs.bool(MainActivity.this,"motion",true))return;
             if(motion!=null)motion.cancel();target=next;
             if(next==-2 && kind==0){shown=next;setText("<1");setTextColor(QualityColors.rtt(0.5));return;}
-            if(next<0||Double.isNaN(next)){shown=next;setText("—");setTextColor(QualityColors.UNKNOWN);return;}
+            if(next<0||!Double.isFinite(next)){shown=next;setText("—");setTextColor(QualityColors.UNKNOWN);return;}
             if(!animate||!AppPrefs.bool(MainActivity.this,"motion",true)||Double.isNaN(shown)||shown<0){
                 shown=next;setText(fmt(next)+(percent?" %":""));setTextColor(quality(next));return;
             }
-            double first=shown;ValueAnimator a=ValueAnimator.ofFloat(0f,1f);motion=a;a.setDuration(195);
+            final int startColor=getCurrentTextColor(),finishColor=quality(next);
+            shown=next;setText(fmt(next)+(percent?" %":""));
+            ValueAnimator a=ValueAnimator.ofFloat(0f,1f);motion=a;a.setDuration(195);
             a.setInterpolator(new DecelerateInterpolator(1.2f));
-            a.addUpdateListener(v->{shown=first+(next-first)*(Float)v.getAnimatedValue();
-                setText(fmt(shown)+(percent?" %":""));setTextColor(quality(shown));});
+            a.addUpdateListener(v->setTextColor(QualityColors.blend(startColor,finishColor,(Float)v.getAnimatedValue())));
             a.start();
         }
     }
