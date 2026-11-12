@@ -702,7 +702,12 @@ public final class MainActivity extends Activity {
         if(journalRows==null||journalScroll==null)return;
         PingService.Snapshot snapshot=PingService.snapshot();
         List<PingService.ProbeEvent> records=snapshot.events;
-        int tailIndex=journalTail==null?-1:records.indexOf(journalTail);
+        // Most refreshes see no new events. Avoid scanning the entire journal or rebuilding an empty one.
+        if(snapshot.id==journalSessionId){
+            if(records.isEmpty()&&journalTail==null&&journalRows.getChildCount()==0)return;
+            if(!records.isEmpty()&&journalTail==records.get(records.size()-1))return;
+        }
+        int tailIndex=journalTail==null?-1:records.lastIndexOf(journalTail);
         if(snapshot.id!=journalSessionId||tailIndex<0){
             journalRows.removeAllViews();
             journalSessionId=snapshot.id;
