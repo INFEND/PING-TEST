@@ -34,10 +34,19 @@ public final class HistoryStore {
             if(previous!=null && previous.optLong("id",-2)==id &&
                     isStaleCheckpoint(previous,entry))return;
         }
-        updated.put(entry);
-        for (int i = 0; i < old.length() && updated.length() < limit(c); i++) {
+        // Existing sessions keep their position: a delayed checkpoint must
+        // not move an older session ahead of a newer one.
+        int existingIndex=-1;
+        if(id>=0)for(int i=0;i<old.length();i++){
+            JSONObject x=old.optJSONObject(i);
+            if(x!=null && x.optLong("id",-2)==id){existingIndex=i;break;}
+        }
+        final int maxEntries=limit(c);
+        if(existingIndex<0)updated.put(entry);
+        for (int i = 0; i < old.length() && updated.length() < maxEntries; i++) {
             JSONObject x = old.optJSONObject(i);
-            if (x != null && (id < 0 || !x.has("id") || x.optLong("id", -2) != id)) updated.put(x);
+            if(i==existingIndex)updated.put(entry);
+            else if (x != null && (id < 0 || !x.has("id") || x.optLong("id", -2) != id)) updated.put(x);
         }
         save(c, updated);
     }
