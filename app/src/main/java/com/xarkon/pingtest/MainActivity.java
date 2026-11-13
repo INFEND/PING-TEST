@@ -1144,6 +1144,7 @@ public final class MainActivity extends Activity {
             }
             final int startColor=getCurrentTextColor(),finishColor=quality(next);
             shown=next;setText(fmt(next)+(percent?" %":""));
+            if(startColor==finishColor){setTextColor(finishColor);return;}
             ValueAnimator a=ValueAnimator.ofFloat(0f,1f);motion=a;a.setDuration(195);
             a.setInterpolator(new DecelerateInterpolator(1.2f));
             a.addUpdateListener(v->setTextColor(QualityColors.blend(startColor,finishColor,(Float)v.getAnimatedValue())));
