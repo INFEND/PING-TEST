@@ -127,6 +127,9 @@ public final class GraphView extends View {
                 continue;
             }
             if(v[i]<0){
+                // Only the explicit loss sentinel represents a confirmed timeout.
+                // Unknown negative values must not become red loss markers.
+                if(v[i]!=-1f)continue;
                 p.setColor(QualityColors.RED);p.setStrokeWidth(1.6f*density);
                 c.drawLine(x-3*density,bottom-5*density,x+3*density,bottom+1*density,p);
                 c.drawLine(x+3*density,bottom-5*density,x-3*density,bottom+1*density,p);
