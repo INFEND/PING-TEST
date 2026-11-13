@@ -11,6 +11,13 @@ class VpnRouteRegression(unittest.TestCase):
         self.assertRegex(SOURCE, r"cm\.getNetworkCapabilities\s*\(\s*network\s*\)")
         self.assertNotIn("getAllNetworks(", SOURCE)
 
+    def test_handover_guard_precedes_route_classification(self):
+        guard = "if(!network.equals(cm.getActiveNetwork()))return Route.UNKNOWN;"
+        self.assertIn(guard, SOURCE)
+        self.assertLess(SOURCE.index("cm.getNetworkCapabilities(network)"), SOURCE.index(guard))
+        self.assertLess(SOURCE.index(guard), SOURCE.index("caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)"))
+        self.assertLess(SOURCE.index(guard), SOURCE.index("caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)"))
+
     def test_vpn_requires_active_network_vpn_transport(self):
         self.assertRegex(SOURCE, r"if\s*\(\s*caps\.hasTransport\(NetworkCapabilities\.TRANSPORT_VPN\)\s*\)\s*return Route\.VPN")
         self.assertIn("return route(context)==Route.VPN;", SOURCE)
