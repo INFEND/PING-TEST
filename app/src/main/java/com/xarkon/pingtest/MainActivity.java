@@ -719,6 +719,7 @@ public final class MainActivity extends Activity {
         }
         int tailIndex=journalTail==null?-1:records.lastIndexOf(journalTail);
         if(snapshot.id!=journalSessionId||tailIndex<0){
+            stopJournalScrollAnimation();
             journalRows.removeAllViews();
             journalSessionId=snapshot.id;
             for(PingService.ProbeEvent event:records)journalRows.addView(eventRow(event));
@@ -749,7 +750,12 @@ public final class MainActivity extends Activity {
             journalTail=records.get(records.size()-1);
         }
         // Resolve the newly laid-out bottom, then gently chase it at frame rate.
-        journalScroll.post(()->followJournalTail());
+        final ScrollView postedScroll=journalScroll;
+        final long postedSession=journalSessionId;
+        postedScroll.post(()->{
+            if(journalScroll==postedScroll&&journalSessionId==postedSession
+                    &&journalDialog!=null&&journalDialog.isShowing())followJournalTail();
+        });
     }
     // HISTORY
     private void historyPage(){
