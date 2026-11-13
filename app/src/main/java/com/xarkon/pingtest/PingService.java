@@ -210,6 +210,13 @@ public final class PingService extends Service {
                     ?"Сеть по умолчанию: без VPN":"Не определён";
                 // Publish the network atomically for the active session only.
                 synchronized(LOCK){if(!live.active || runId!=expectedRun || stopping)return;
+                    // DNS may have waited for LOCK while the UID default changed.
+                    // Validate again before publishing the address or starting probes.
+                    if(!activeNetwork.equals(connectivity.getActiveNetwork()))
+                        throw new UnknownHostException("Сеть приложения изменилась перед запуском ICMP");
+                    VpnGuard.Route publishRoute=VpnGuard.route(this);
+                    if(!activeNetwork.equals(connectivity.getActiveNetwork()) || publishRoute!=effectiveRoute)
+                        throw new UnknownHostException("Маршрут приложения изменился перед запуском ICMP");
                     sessionNetwork=activeNetwork;
                     sessionRoute=effectiveRoute;
                     live.vpnInfo=effectiveRoute==VpnGuard.Route.VPN?"VPN включён":
