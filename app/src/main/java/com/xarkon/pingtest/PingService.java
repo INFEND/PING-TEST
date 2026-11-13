@@ -583,6 +583,7 @@ public final class PingService extends Service {
                 error.equals("Прервано")||
                 (rtt<0 && rtt!=-2 && !"Нет ответа".equals(error));
         boolean routeChangedAtCommit=false;
+        boolean historyCheckpoint=false;
         synchronized(LOCK){
             if(!live.active||runId!=capturedRun||stopping)return;
             // Revalidate immediately before committing counters. The UID route
@@ -598,6 +599,8 @@ public final class PingService extends Service {
                 (sessionRoute!=VpnGuard.Route.UNKNOWN&&commitRoute!=sessionRoute);
             if(!routeChangedAtCommit){
             live.done++;
+            // Checkpoint by committed completions, not request sequence: parallel replies can arrive out of order.
+            historyCheckpoint=live.done%10==0;
             if(rtt>=0||rtt==-2){
                 live.ok++;
                 if(rtt>=0){live.timed++;live.last=rtt;live.total+=rtt;live.min=Math.min(live.min,rtt);live.max=Math.max(live.max,rtt);
@@ -622,7 +625,7 @@ public final class PingService extends Service {
         if(fatal){finishRun(capturedRun,error);return;}
         if(capturedRun!=runId)return;
         refreshNotification(false);
-        if(seq%10==0)persist(false,capturedRun);
+        if(historyCheckpoint)persist(false,capturedRun);
         checkFinished(capturedRun);
     }
     private static void addLog(String msg){
