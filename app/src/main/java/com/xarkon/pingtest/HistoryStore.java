@@ -27,12 +27,24 @@ public final class HistoryStore {
     public static synchronized void upsert(Context c, JSONObject entry) {
         JSONArray old = all(c), updated = new JSONArray();
         long id = entry.optLong("id", -1);
+        // Parallel probe callbacks may persist snapshots out of order.
+        // Never replace a newer or final snapshot with an older checkpoint.
+        if(id>=0)for(int i=0;i<old.length();i++){
+            JSONObject previous=old.optJSONObject(i);
+            if(previous!=null && previous.optLong("id",-2)==id &&
+                    isStaleCheckpoint(previous,entry))return;
+        }
         updated.put(entry);
         for (int i = 0; i < old.length() && updated.length() < limit(c); i++) {
             JSONObject x = old.optJSONObject(i);
             if (x != null && (id < 0 || !x.has("id") || x.optLong("id", -2) != id)) updated.put(x);
         }
         save(c, updated);
+    }
+    static boolean isStaleCheckpoint(JSONObject previous,JSONObject incoming) {
+        if(previous.optBoolean("finished",false) && !incoming.optBoolean("finished",false))return true;
+        return previous.has("revision") && incoming.has("revision") &&
+                previous.optLong("revision",-1)>incoming.optLong("revision",-1);
     }
     public static synchronized void remove(Context c, long id) {
         JSONArray old = all(c), result = new JSONArray();

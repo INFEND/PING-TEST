@@ -717,11 +717,11 @@ public final class PingService extends Service {
         Snapshot s=snapshot();if(s.id==0)return;
         try{
             JSONObject j=new JSONObject();
-            j.put("id",s.id);j.put("host",s.host);j.put("ip",s.ip);j.put("time",s.started);
+            j.put("id",s.id);j.put("revision",s.version);j.put("host",s.host);j.put("ip",s.ip);j.put("time",s.started);
             j.put("method",s.method);j.put("label",s.label);j.put("vpnInfo",s.vpnInfo);j.put("route",s.route);j.put("port",s.port);j.put("warning",s.warning);j.put("error",s.error);
             j.put("sent",s.sent);j.put("done",s.done);j.put("ok",s.ok);j.put("lost",s.lost);j.put("skipped",s.skipped);
             j.put("min",s.timed>0?s.min:-1);j.put("avg",s.avg());j.put("max",s.timed>0?s.max:-1);j.put("timed",s.timed);
-            j.put("jitter",s.jitter());j.put("ttl",s.ttl);j.put("finished",finished);
+            j.put("jitter",s.jitter());j.put("ttl",s.ttl);j.put("finished",finished || !s.active);
             // Preserve measured events verbatim; legacy text logs remain readable.
             org.json.JSONArray recorded=new org.json.JSONArray();
             for(ProbeEvent e:s.events){
