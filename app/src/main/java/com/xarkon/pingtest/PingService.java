@@ -622,7 +622,7 @@ public final class PingService extends Service {
         if(fatal){finishRun(capturedRun,error);return;}
         if(capturedRun!=runId)return;
         refreshNotification(false);
-        if(seq%10==0)persist(false);
+        if(seq%10==0)persist(false,capturedRun);
         checkFinished(capturedRun);
     }
     private static void addLog(String msg){
@@ -712,9 +712,10 @@ public final class PingService extends Service {
             }catch(Exception e){Log.w("PING TEST","Chart notification",e);}
         }else if(!AppPrefs.bool(this,"notify_chart",false))notify.cancel(GRAPH);
     }
-    private void persist(boolean finished){
+    private void persist(boolean finished){persist(finished,runId);}
+    private void persist(boolean finished,long expectedRun){
         if(!AppPrefs.bool(this,"history",true))return;
-        Snapshot s=snapshot();if(s.id==0)return;
+        Snapshot s=snapshot();if(s.id==0 || s.id!=expectedRun)return;
         try{
             JSONObject j=new JSONObject();
             j.put("id",s.id);j.put("revision",s.version);j.put("host",s.host);j.put("ip",s.ip);j.put("time",s.started);
@@ -757,7 +758,13 @@ public final class PingService extends Service {
         stopSelf();
     }
     @Override public void onDestroy(){
-        if(!stopping){synchronized(LOCK){live.active=false;addLog("● Служба остановлена системой");}persist(true);}
+        boolean interrupted=false;
+        if(!stopping){synchronized(LOCK){
+            if(live.active && live.id==runId){
+                live.active=false;addLog("● Служба остановлена системой");live.version++;interrupted=true;
+            }
+        }}
+        if(interrupted){signalUpdate();persist(true);}
         if(clock!=null)clock.shutdownNow();if(workers!=null)workers.shutdownNow();
         terminateActivePings();
         releaseLocks();notify.cancel(GRAPH);super.onDestroy();
