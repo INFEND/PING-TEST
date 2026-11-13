@@ -38,5 +38,13 @@ class ReleaseVersionConsistency(unittest.TestCase):
         self.assertGreaterEqual(len(entries), 2, "Graph scale changes must remain in cumulative OTA notes")
 
 
+    def test_graph_detach_notes_are_visible(self):
+        notes = ROOT / "release_notes/v1.5.182.txt"
+        entries = [line.lstrip() for line in notes.read_text(encoding="utf-8").splitlines()
+                   if line.lstrip().startswith(("• ", "[+] ", "[-] ", "[=] "))]
+        self.assertTrue(any("графика" in line and "анимации" in line for line in entries),
+                        "Graph detach changes must remain visible in cumulative OTA notes")
+
+
 if __name__ == "__main__":
     unittest.main()
