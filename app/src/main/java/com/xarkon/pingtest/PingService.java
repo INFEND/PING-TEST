@@ -285,7 +285,7 @@ public final class PingService extends Service {
             workers.execute(()->probe(seq,capturedRun,probeAddress,probeBytes,probeTtl,probeTimeout));
             signalUpdate();
         }catch(RejectedExecutionException ex){
-            synchronized(LOCK){if(capturedRun!=runId || !live.active)return;
+            synchronized(LOCK){if(capturedRun!=runId || !live.active || stopping)return;
                 live.sent--;live.skipped++;addProbeEvent(seq,-1,probeBytes,"Пропуск: очередь заполнена");live.version++;}
             signalUpdate();checkFinished(capturedRun);
         }
