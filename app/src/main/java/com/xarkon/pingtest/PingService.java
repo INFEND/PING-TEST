@@ -257,7 +257,7 @@ public final class PingService extends Service {
         if(!initialNetwork.equals(afterTickRoute)){
             finishRun(scheduledRun,"Сеть приложения изменилась. Начните новую проверку.");return;
         }
-        if(currentRoute!=VpnGuard.Route.UNKNOWN&&sessionRoute!=VpnGuard.Route.UNKNOWN
+        if(sessionRoute!=VpnGuard.Route.UNKNOWN
             &&currentRoute!=sessionRoute){
             finishRun(scheduledRun,"Сеть по умолчанию изменилась. Начните новую проверку.");return;
         }
