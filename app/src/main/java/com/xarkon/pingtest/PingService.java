@@ -566,6 +566,9 @@ public final class PingService extends Service {
         }
         // Local routing/permission/command failures are not ICMP packet loss.
         // Only an attempted probe with no reply contributes to loss statistics.
+        // Fail closed: only the explicit confirmed no-reply outcome is loss.
+        if(rtt<0 && rtt!=-2 && !"Нет ответа".equals(error) && error.isEmpty())
+            error="Неоднозначный результат ping";
         boolean fatal=error.startsWith("Пинг запрещён")||
                 error.startsWith("Параметры ping")||
                 error.startsWith("Ошибка запуска ping")||
@@ -577,7 +580,8 @@ public final class PingService extends Service {
                 error.startsWith("Не удалось полностью прочитать вывод ping")||
                 error.startsWith("Ответ ping не распознан")||
                 error.startsWith("Неоднозначный результат ping")||
-                error.equals("Прервано");
+                error.equals("Прервано")||
+                (rtt<0 && rtt!=-2 && !"Нет ответа".equals(error));
         boolean routeChangedAtCommit=false;
         synchronized(LOCK){
             if(!live.active||runId!=capturedRun||stopping)return;
