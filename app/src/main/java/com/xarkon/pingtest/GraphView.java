@@ -52,7 +52,7 @@ public final class GraphView extends View {
         if(animatedPoints.length!=fresh.length) animatedPoints=new float[fresh.length];
         accent=color;bg=background;
         if(animator!=null)animator.cancel();
-        boolean animate=AppPrefs.bool(getContext(),"motion",true)&&fresh.length>0
+        boolean animate=isAttachedToWindow()&&AppPrefs.bool(getContext(),"motion",true)&&fresh.length>0
             &&(newSample||Math.abs(scaleTarget-scaleStart)>0.01f);
         if(animate){
             progress=0f;animator=ValueAnimator.ofFloat(0f,1f);animator.setDuration(220);
@@ -85,6 +85,13 @@ public final class GraphView extends View {
             animated[points.length-1]=previous+(points[points.length-1]-previous)*progress;
         }
         renderWithScale(canvas,getWidth(),getHeight(),animated,accent,bg,displayMax,paint,fillPath);
+    }
+    @Override protected void onDetachedFromWindow(){
+        if(animator!=null){animator.cancel();animator=null;}
+        // A detached chart must not retain a partially interpolated sample.
+        progress=1f;
+        displayMax=scaleTarget;
+        super.onDetachedFromWindow();
     }
     /** Fixed autoscale for exports and screenshots, independent of live animations. */
     public static void render(Canvas c,int w,int h,float[] v,int accent,int background){
