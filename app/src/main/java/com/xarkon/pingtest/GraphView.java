@@ -23,6 +23,9 @@ public final class GraphView extends View {
     private final Path fillPath=new Path();
     public GraphView(Context c){super(c);}
     public void setData(List<Float> values,int color,int background){
+        // Dispatch-only updates often leave the chart unchanged. Avoid allocating
+        // a new sample array or restarting animation for those monitor frames.
+        if(accent==color&&bg==background&&sameSamples(points,values))return;
         float[] fresh=new float[values.size()];for(int i=0;i<fresh.length;i++)fresh[i]=values.get(i);
         if(Arrays.equals(points,fresh)&&accent==color&&bg==background)return;
         // A full rolling window can shift even when consecutive RTT values match.
@@ -64,6 +67,15 @@ public final class GraphView extends View {
             progress=1f;displayMax=scaleTarget;
         }
         invalidate();
+    }
+    private static boolean sameSamples(float[] current,List<Float> incoming){
+        if(current.length!=incoming.size())return false;
+        int i=0;
+        for(float value:incoming){
+            // Match Arrays.equals semantics, including NaN and signed zero.
+            if(Float.floatToIntBits(current[i++])!=Float.floatToIntBits(value))return false;
+        }
+        return true;
     }
     @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);
         float[] animated=points;
