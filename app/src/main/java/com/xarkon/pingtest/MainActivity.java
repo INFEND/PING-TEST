@@ -44,6 +44,8 @@ public final class MainActivity extends Activity {
     }};
     private boolean registered=false;
     private long renderedVersion=-1,seenSession=-1;
+    private String idleMismatchHost=null;
+    private long idleMismatchId=-1,idleMismatchVersion=-1;
     private boolean activeBefore=false;
     private LinearLayout root,page,nav;
     private TextView host;
@@ -242,7 +244,7 @@ public final class MainActivity extends Activity {
         page.addView(events);
         info=Ui.text(this,"",11,Ui.muted(),false);info.setPadding(Ui.dp(2),Ui.dp(9),Ui.dp(2),Ui.dp(1));
         page.addView(info);
-        renderedVersion=-1;activeBefore=false;refreshPing();
+        renderedVersion=-1;idleMismatchHost=null;activeBefore=false;refreshPing();
     }
     private void miniMetric(LinearLayout parent,String name,TextView value,int index){
         LinearLayout col=Ui.vertical(this);
@@ -279,7 +281,10 @@ public final class MainActivity extends Activity {
         if(s==null)return;
         refreshStatus(s);
         if(!s.active && !s.host.equals(selectedHost)){
-            ip.setText(VpnGuard.statusText(this));
+            String route=VpnGuard.statusText(this);
+            if(!route.contentEquals(ip.getText()))ip.setText(route);
+            if(selectedHost.equals(idleMismatchHost)&&s.id==idleMismatchId&&s.version==idleMismatchVersion)return;
+            idleMismatchHost=selectedHost;idleMismatchId=s.id;idleMismatchVersion=s.version;
             last.update(-1,false,false);avg.update(-1,false,false);failed.update(-1,false,false);
             if(qualityState!=null){qualityState.setText("ОЖИДАНИЕ");qualityState.setTextColor(QualityColors.UNKNOWN);}
             sendText.update(0,0,0,false);
@@ -293,6 +298,7 @@ public final class MainActivity extends Activity {
             info.setText("");renderedVersion=-1;seenSession=-1;
             return;
         }
+        idleMismatchHost=null;
         if(s.active!=activeBefore||renderedVersion<0){activeBefore=s.active;
             go.setText(s.active?"■  ОСТАНОВИТЬ":"НАЧАТЬ ПРОВЕРКУ  ›");
             go.setBackground(Ui.shape(s.active?Ui.surface2(this):AppPrefs.accent(this),Ui.dp(12),s.active?Ui.border():0));
