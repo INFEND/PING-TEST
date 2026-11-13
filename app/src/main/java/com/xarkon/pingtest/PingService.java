@@ -560,6 +560,12 @@ public final class PingService extends Service {
         // (for example during VPN handover). Do not attribute an in-flight
         // result to the route captured at the start of this session.
         VpnGuard.Route resultRoute=VpnGuard.route(this);
+        Network afterResultRoute=resultConnectivity==null?null:resultConnectivity.getActiveNetwork();
+        if(stopping || capturedRun!=runId)return;
+        if(!expectedNetwork.equals(afterResultRoute)){
+            finishRun(capturedRun,"Сеть приложения изменилась при проверке результата ICMP. Начните новую проверку.");
+            return;
+        }
         if(sessionRoute!=VpnGuard.Route.UNKNOWN && resultRoute!=sessionRoute){
             finishRun(capturedRun,"Маршрут приложения изменился во время ICMP. Начните новую проверку.");
             return;
