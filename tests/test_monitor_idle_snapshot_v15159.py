@@ -18,7 +18,10 @@ class MonitorIdleSnapshot(unittest.TestCase):
         self.assertIn("renderedVersion=-1;seenSession=-1;", MAIN)
 
     def test_recreated_view_forces_render(self):
-        self.assertIn("renderedVersion=-1;activeBefore=false;refreshPing();", MAIN)
+        body = MAIN.split("private void pingPage(){", 1)[1].split("private void miniMetric", 1)[0]
+        refresh = body.index("refreshPing();")
+        for reset in ("renderedVersion=-1;", "idleMismatchHost=null;", "activeBefore=false;"):
+            self.assertLess(body.index(reset), refresh)
         self.assertIn("if(s==null)return;", MAIN)
 
 if __name__ == "__main__":
