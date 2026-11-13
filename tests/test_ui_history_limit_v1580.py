@@ -6,7 +6,8 @@ ota=(root/"app/src/main/java/com/xarkon/pingtest/OtaProgressDialog.java").read_t
 icons=(root/"app/src/main/java/com/xarkon/pingtest/UiIcon.java").read_text()
 assert "slider.setMax(19)" in main and "50+progress*50" in main
 assert "HistoryStore.setLimit(MainActivity.this,selected)" in main
-assert "updated.length() < limit(c)" in store and "trimmed.length()<safe" in store
+assert "final int maxEntries=limit(c);" in store
+assert "updated.length() < maxEntries" in store and "trimmed.length()<safe" in store
 assert 'detailStat(detail,"МИН")' in main
 assert 'detailStat(detail,"СРЕД")' in main
 assert 'detailStat(detail,"МАКС")' in main
