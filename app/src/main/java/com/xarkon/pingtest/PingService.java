@@ -678,8 +678,8 @@ public final class PingService extends Service {
         Intent stop=new Intent(this,PingService.class).setAction(ACTION_STOP);
         PendingIntent stopP=PendingIntent.getService(this,1,stop,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         int classified=s.ok+s.lost;
-        String routeLabel=s.vpnInfo.contains("включён")?"С VPN":
-                s.vpnInfo.contains("не определена")?"Сеть неизвестна":"Без VPN";
+        String routeLabel="VPN включён".equals(s.vpnInfo)?"С VPN":
+                "Сеть приложения без VPN".equals(s.vpnInfo)?"Без VPN":"Сеть неизвестна";
         String content=s.sent==0?"Подключение к узлу…":
                 String.format(Locale.US,"%s · %d/%d завершено · %s · потери %.1f%%",
                     routeLabel,s.ok,classified,s.timed>0?String.format(Locale.US,"%.0f мс",s.avg()):s.ok>0?"<1 мс":"ожидание",s.lossPct());
