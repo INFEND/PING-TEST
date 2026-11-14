@@ -264,8 +264,8 @@ public final class PingService extends Service {
         if(!initialNetwork.equals(afterTickRoute)){
             finishRun(scheduledRun,"Сеть приложения изменилась. Начните новую проверку.");return;
         }
-        if(sessionRoute!=VpnGuard.Route.UNKNOWN
-            &&currentRoute!=sessionRoute){
+        // UNKNOWN is a distinct route state: a newly identified route also ends the session.
+        if(currentRoute!=sessionRoute){
             finishRun(scheduledRun,"Сеть по умолчанию изменилась. Начните новую проверку.");return;
         }
         final int seq;final long capturedRun=scheduledRun;
@@ -420,7 +420,7 @@ public final class PingService extends Service {
         if(stopping || capturedRun!=runId)return;
         if(launchExpected==null || !launchExpected.equals(launchNetwork) ||
             !launchExpected.equals(launchAfter) ||
-            (sessionRoute!=VpnGuard.Route.UNKNOWN && launchRoute!=sessionRoute)){
+            (launchRoute!=sessionRoute)){
             finishRun(capturedRun,"Сеть приложения изменилась перед запуском ICMP. Начните новую проверку.");
             return;
         }
@@ -576,7 +576,7 @@ public final class PingService extends Service {
             finishRun(capturedRun,"Сеть приложения изменилась при проверке результата ICMP. Начните новую проверку.");
             return;
         }
-        if(sessionRoute!=VpnGuard.Route.UNKNOWN && resultRoute!=sessionRoute){
+        if(resultRoute!=sessionRoute){
             finishRun(capturedRun,"Маршрут приложения изменился во время ICMP. Начните новую проверку.");
             return;
         }
@@ -612,7 +612,7 @@ public final class PingService extends Service {
             Network afterRouteNetwork=commitCm==null?null:commitCm.getActiveNetwork();
             routeChangedAtCommit=sessionNetwork==null||!sessionNetwork.equals(commitNetwork)||
                 !sessionNetwork.equals(afterRouteNetwork)||
-                (sessionRoute!=VpnGuard.Route.UNKNOWN&&commitRoute!=sessionRoute);
+                (commitRoute!=sessionRoute);
             if(!routeChangedAtCommit){
             live.done++;
             // Checkpoint by committed completions, not request sequence: parallel replies can arrive out of order.

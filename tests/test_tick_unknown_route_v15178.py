@@ -6,7 +6,7 @@ SOURCE = (Path(__file__).resolve().parents[1] / "app/src/main/java/com/xarkon/pi
 class TickUnknownRouteTest(unittest.TestCase):
     def test_known_route_must_remain_known_before_reserving_probe(self):
         tick = SOURCE.split("private void tick(", 1)[1].split("workers.execute", 1)[0]
-        guard = "if(sessionRoute!=VpnGuard.Route.UNKNOWN\n            &&currentRoute!=sessionRoute)"
+        guard = "if(currentRoute!=sessionRoute)"
         self.assertIn(guard, tick)
         self.assertNotIn("currentRoute!=VpnGuard.Route.UNKNOWN&&", tick)
         self.assertLess(tick.index(guard), tick.index("seq=++live.planned"))
