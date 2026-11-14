@@ -27,7 +27,12 @@ public final class GraphView extends View {
         // a new sample array or restarting animation for those monitor frames.
         if(accent==color&&bg==background&&sameSamples(points,values))return;
         float[] fresh=new float[values.size()];for(int i=0;i<fresh.length;i++)fresh[i]=values.get(i);
-        if(Arrays.equals(points,fresh)&&accent==color&&bg==background)return;
+        // Theme-only updates must not restart or settle an in-flight RTT animation.
+        if(Arrays.equals(points,fresh)){
+            accent=color;bg=background;
+            invalidate();
+            return;
+        }
         // A full rolling window can shift even when consecutive RTT values match.
         // Compare the entire visible window so repeated RTTs still animate as new samples.
         boolean newSample=points.length>0&&fresh.length>0&&!Arrays.equals(points,fresh);
