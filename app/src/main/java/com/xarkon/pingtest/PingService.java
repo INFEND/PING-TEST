@@ -311,6 +311,9 @@ public final class PingService extends Service {
             String line=lines.group();
             Matcher time=TIME.matcher(line);
             if(!time.find())continue;
+            // A reply line must contain one unambiguous RTT token. Do not
+            // silently choose the first of contradictory vendor diagnostics.
+            if(TIME.matcher(line).region(time.end(),line.length()).find())continue;
             try{
                 double latency=Double.parseDouble(time.group(1).replace(',','.'));
                 // A bounded RTT is not an exact numeric measurement.
