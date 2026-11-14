@@ -10,5 +10,8 @@ class NotificationRouteTest(unittest.TestCase):
         self.assertIn('"Сеть приложения без VPN".equals(s.vpnInfo)?"Без VPN":"Сеть неизвестна";', body)
         self.assertNotIn('?"Сеть неизвестна":"Без VPN"', body)
 
+    def test_all_loss_preserves_route_and_warning(self):
+        self.assertIn('if(s.ok==0&&s.lost>0&&s.error.isEmpty()&&s.warning.isEmpty())content=routeLabel+" · 0 / "+classified+" • ответов нет";', SOURCE)
+
 if __name__ == "__main__":
     unittest.main()

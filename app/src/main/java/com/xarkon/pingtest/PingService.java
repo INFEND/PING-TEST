@@ -686,7 +686,7 @@ public final class PingService extends Service {
         if(s.sent>0&&classified==0)content=routeLabel+" · ожидание · потери —";
         if(!s.error.isEmpty())content=s.error;
         else if(!s.warning.isEmpty())content=s.warning;
-        if(s.ok==0&&s.lost>0&&s.error.isEmpty())content="0 / "+(s.ok+s.lost)+" • ответов нет";
+        if(s.ok==0&&s.lost>0&&s.error.isEmpty()&&s.warning.isEmpty())content=routeLabel+" · 0 / "+classified+" • ответов нет";
         if(!AppPrefs.bool(this,"notifications",true)) content="Активная проверка сети · нажмите для просмотра";
         Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(this,CHANNEL):new Notification.Builder(this);
         b.setSmallIcon(android.R.drawable.stat_notify_sync).setContentTitle("PING TEST • "+s.label)

@@ -18,7 +18,7 @@ class DefaultNetworkCopyTest(unittest.TestCase):
 
     def test_unknown_state_stays_unknown(self):
         self.assertIn("Сеть по умолчанию не определена", SOURCE)
-        self.assertIn('s.vpnInfo.contains("не определена")', SOURCE)
+        self.assertIn('"Сеть приложения без VPN".equals(s.vpnInfo)?"Без VPN":"Сеть неизвестна";', SOURCE)
         self.assertIn("Сеть неизвестна", SOURCE)
 
     def test_uid_default_network_not_other_apps_vpn(self):
