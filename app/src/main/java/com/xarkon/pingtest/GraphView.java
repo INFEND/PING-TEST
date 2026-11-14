@@ -31,7 +31,13 @@ public final class GraphView extends View {
         // A full rolling window can shift even when consecutive RTT values match.
         // Compare the entire visible window so repeated RTTs still animate as new samples.
         boolean newSample=points.length>0&&fresh.length>0&&!Arrays.equals(points,fresh);
-        previous=points.length>0?points[points.length-1]:-1;
+        float last=points.length>0?points[points.length-1]:-1;
+        // Continue from the visible RTT when a new frame interrupts animation.
+        // Never interpolate across bounded replies, losses or unknown samples.
+        if(progress<1f&&Float.isFinite(previous)&&previous>=0&&Float.isFinite(last)&&last>=0){
+            last=previous+(last-previous)*progress;
+        }
+        previous=last;
         // Keep the Y axis stable across incoming packets. A sudden high RTT
         // must still fit, while downward rescaling waits for a meaningful drop.
         float required=axisMaximum(fresh);
