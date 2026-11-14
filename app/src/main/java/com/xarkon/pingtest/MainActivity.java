@@ -1119,15 +1119,19 @@ public final class MainActivity extends Activity {
         void update(int ok,int sent,int lost,boolean animate){
             ok=Math.max(0,ok);sent=Math.max(ok,sent);
             if(ok==targetOk&&sent==targetSent&&lost==targetLost&&animate&&AppPrefs.bool(MainActivity.this,"motion",true))return;
-            if(animator!=null)animator.cancel();
             final int nextOk=ok,nextSent=sent;
             final int startColor=getCurrentTextColor();
             final int finishColor=QualityColors.success(nextOk,nextOk+lost);
+            final int previousColor=QualityColors.success(targetOk,targetOk+targetLost);
             targetOk=nextOk;targetSent=nextSent;targetLost=lost;
             setText(nextOk+" / "+nextSent);
             if(!animate||!AppPrefs.bool(MainActivity.this,"motion",true)){
+                if(animator!=null)animator.cancel();
                 setTextColor(finishColor);return;
             }
+            if(animator!=null&&animator.isRunning()&&previousColor==finishColor)return;
+            if(animator!=null)animator.cancel();
+            if(startColor==finishColor)return;
             ValueAnimator change=ValueAnimator.ofFloat(0f,1f);animator=change;
             change.setDuration(195);
             change.setInterpolator(new DecelerateInterpolator(1.2f));
