@@ -43,6 +43,11 @@ class IcmpParserBehavior(unittest.TestCase):
         reject("64 bytes from 1.1.1.2: icmp_seq=1 time=2 ms");
         reject("64 bytes from 1.1.1.1: icmp_seq=10 time=2 ms");
         reject("rtt min/avg/max = 1/2/3 ms");
+        reject("64 bytes from 1.1.1.1:2: icmp_seq=1 time=2 ms");
+        if (parseIcmpReply("64 bytes from 2001:db8::1:2: icmp_seq=1 time=2 ms", "2001:db8::1") != null)
+            throw new AssertionError("IPv6 prefix is not the selected address");
+        if (parseIcmpReply("64 bytes from 2001:db8::1: icmp_seq=1 time=2 ms", "2001:db8::1") == null)
+            throw new AssertionError("Valid IPv6 reply");
         loss("1 packets transmitted, 0 received", true);
         loss("0 packets transmitted, 0 received", false);
         loss("Request timeout", false);
