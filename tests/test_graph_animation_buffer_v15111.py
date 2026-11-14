@@ -10,6 +10,8 @@ class GraphAnimationAllocationTests(unittest.TestCase):
         self.assertIn("if(animatedPoints.length!=fresh.length) animatedPoints=new float[fresh.length]", SOURCE)
         self.assertIn("System.arraycopy(points,0,animatedPoints,0,points.length)", SOURCE)
         self.assertIn("animated=animatedPoints", SOURCE)
+        self.assertLess(SOURCE.index("System.arraycopy(points,0,animatedPoints,0,points.length)"), SOURCE.index("protected void onDraw"))
+        self.assertNotIn("System.arraycopy", SOURCE.split("protected void onDraw", 1)[1])
         self.assertNotIn("Arrays.copyOf(points,points.length)", SOURCE)
     def test_real_samples_remain_unmodified(self):
         self.assertIn("animatedPoints[points.length-1]=previous+", SOURCE) if "animatedPoints[points.length-1]=previous+" in SOURCE else self.assertIn("animated[points.length-1]=previous+", SOURCE)

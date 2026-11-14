@@ -60,6 +60,8 @@ public final class GraphView extends View {
         points=fresh;
         // Resize only when the sample window length changes, not on each frame.
         if(animatedPoints.length!=fresh.length) animatedPoints=new float[fresh.length];
+        // The prefix is immutable until the next sample snapshot; copy once, not per frame.
+        System.arraycopy(points,0,animatedPoints,0,points.length);
         accent=color;bg=background;
         if(animator!=null)animator.cancel();
         boolean animate=isAttachedToWindow()&&AppPrefs.bool(getContext(),"motion",true)&&fresh.length>0
@@ -90,7 +92,6 @@ public final class GraphView extends View {
     @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);
         float[] animated=points;
         if(points.length>0&&progress<1f&&Float.isFinite(previous)&&previous>=0&&Float.isFinite(points[points.length-1])&&points[points.length-1]>=0){
-            System.arraycopy(points,0,animatedPoints,0,points.length);
             animated=animatedPoints;
             animated[points.length-1]=previous+(points[points.length-1]-previous)*progress;
         }
