@@ -35,6 +35,10 @@ class IcmpParserBehavior(unittest.TestCase):
         reply(prefix + "time=0,42 ms", 0.42, -1);
         reply(prefix + "ttl=256 time=2 ms", 2, -1);
         reject(prefix + "time<10 ms");
+        reject(prefix + "time<0 ms");
+        reject(prefix + "time<0,0 ms");
+        reply(prefix + "time=0 ms", 0, -1);
+        reply(prefix + "time<0.1 ms", -2, -1);
         reject(prefix + "time=1e3 ms");
         reject("64 bytes from 1.1.1.2: icmp_seq=1 time=2 ms");
         reject("64 bytes from 1.1.1.1: icmp_seq=10 time=2 ms");

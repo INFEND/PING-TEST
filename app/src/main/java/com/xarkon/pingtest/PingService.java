@@ -317,7 +317,7 @@ public final class PingService extends Service {
                 // Only a bound of <=1 ms proves the displayed '<1 ms' bucket.
                 // 'time<10' must not be fabricated as a sub-millisecond reply.
                 if(line.substring(time.start(),time.start(1)).indexOf('<')>=0){
-                    if(latency>1)continue;
+                    if(!Double.isFinite(latency)||latency<=0||latency>1)continue;
                     latency=-2;
                 }
                 if(!Double.isFinite(latency)||(latency<0&&latency!=-2))continue;
