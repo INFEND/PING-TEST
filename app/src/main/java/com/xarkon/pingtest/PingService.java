@@ -326,7 +326,7 @@ public final class PingService extends Service {
                 if(!Double.isFinite(latency)||(latency<0&&latency!=-2))continue;
                 Matcher ttl=TTL.matcher(line);
                 int replyTtl=-1;
-                if(ttl.find())try{int parsedTtl=Integer.parseInt(ttl.group(1));
+                if(ttl.find()&&!TTL.matcher(line).region(ttl.end(),line.length()).find())try{int parsedTtl=Integer.parseInt(ttl.group(1));
                     if(parsedTtl>=1&&parsedTtl<=255)replyTtl=parsedTtl;}
                     catch(NumberFormatException ignored){}
                 return new double[]{latency,replyTtl};

@@ -34,6 +34,8 @@ class IcmpParserBehavior(unittest.TestCase):
         reply(prefix + "ttl=57 time<1 ms", -2, 57);
         reply(prefix + "time=0,42 ms", 0.42, -1);
         reply(prefix + "ttl=256 time=2 ms", 2, -1);
+        reply(prefix + "ttl=64 ttl=32 time=2 ms", 2, -1);
+        reply(prefix + "ttl=64 time<1 ms ttl=32", -2, -1);
         reject(prefix + "time<10 ms");
         reject(prefix + "time<0 ms");
         reject(prefix + "time<0,0 ms");
