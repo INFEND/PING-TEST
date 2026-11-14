@@ -7,7 +7,6 @@ import android.view.View;
 import android.view.animation.DecelerateInterpolator;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 
 /** Realtime RTT chart, quality-colored samples, error markers and animated latest sample. */
 public final class GraphView extends View {
@@ -133,7 +132,8 @@ public final class GraphView extends View {
             float y=top+(bottom-top)*k/3f;
             p.setColor(0xff28303a);c.drawLine(left,y,right,y,p);
             p.setColor(0xff8b98a5);p.setTextSize(10*density);
-            c.drawText(String.format(Locale.US,"%.0f",max*(3-k)/3),4*density,y+3*density,p);
+            // RTT axis is nonnegative; integer rounding avoids a Formatter per tick/frame.
+            c.drawText(Long.toString(Math.round((double)(max*(3-k)/3))),4*density,y+3*density,p);
         }
         if(v.length==0){p.setColor(0xff9ba8b1);p.setTextSize(12*density);
             c.drawText("Ожидание измерений",left+10*density,h/2f,p);return;}
