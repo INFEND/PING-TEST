@@ -300,6 +300,11 @@ public final class PingService extends Service {
      * Summary lines and unrelated diagnostic text must never supply an RTT.
      */
     private static double[] parseIcmpReply(String output,String expectedAddress){
+        return parseIcmpReply(output,expectedAddress,false);
+    }
+    // For loss classification, any valid echo is evidence against zero replies,
+    // even when multiple echoes disagree and cannot supply a trustworthy RTT.
+    private static double[] parseIcmpReply(String output,String expectedAddress,boolean firstEvidenceOnly){
         if(expectedAddress==null||expectedAddress.isEmpty())return null;
         String quoted=Pattern.quote(expectedAddress);
         // Some Android ping variants indent the echo reply. Permit only horizontal
@@ -307,6 +312,7 @@ public final class PingService extends Service {
         Pattern reply=Pattern.compile("(?m)^[ \\t]*\\d+ bytes from "+quoted+
             "(?:%[\\w.-]+)?(?::[ \\t]+|[ \\t]+)(?=[^\\r\\n]*\\bicmp_seq(?:[ \t]*=[ \t]*|[ \t]+)1(?![\\w.,:/+-]))[^\\r\\n]*$",Pattern.CASE_INSENSITIVE);
         Matcher lines=reply.matcher(output);
+        double[] accepted=null;
         while(lines.find()){
             String line=lines.group();
             // A single echo reply cannot carry conflicting sequence fields.
@@ -332,10 +338,13 @@ public final class PingService extends Service {
                 if(ttl.find()&&!TTL.matcher(line).region(ttl.end(),line.length()).find())try{int parsedTtl=Integer.parseInt(ttl.group(1));
                     if(parsedTtl>=1&&parsedTtl<=255)replyTtl=parsedTtl;}
                     catch(NumberFormatException ignored){}
-                return new double[]{latency,replyTtl};
+                if(firstEvidenceOnly)return new double[]{latency,replyTtl};
+                if(accepted==null)accepted=new double[]{latency,replyTtl};
+                else if(Double.compare(accepted[0],latency)!=0)return null;
+                else if(accepted[1]!=replyTtl)accepted[1]=-1;
             }catch(NumberFormatException ignored){}
         }
-        return null;
+        return accepted;
     }
 
     /** Native ping diagnostics vary in capitalization across Android vendors.
@@ -549,7 +558,7 @@ public final class PingService extends Service {
                     // including negative vendor-specific codes, is a local failure.
                     // A valid echo reply contradicts a zero-received vendor summary.
                     // Never count such inconsistent output as confirmed packet loss.
-                    else if(exitCode==1&&isConfirmedNoReply(output)&&parseIcmpReply(output,probeAddress)==null)
+                    else if(exitCode==1&&isConfirmedNoReply(output)&&parseIcmpReply(output,probeAddress,true)==null)
                         error="Нет ответа";
                     else if(exitCode==1)error="Неоднозначный результат ping (код 1)";
                     else if(exitCode==0)error="Ответ ping не распознан";

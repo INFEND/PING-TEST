@@ -47,6 +47,12 @@ class IcmpParserBehavior(unittest.TestCase):
         reject("64 bytes from 1.1.1.1: icmp_seq=2 icmp_seq=1 time=2 ms");
         reject(prefix + "icmp_seq=1 time<1 ms");
         reject(prefix + "time<1 ms time=5 ms");
+        reject(prefix + "time=2 ms\n" + prefix + "time=9 ms");
+        reject(prefix + "time<1 ms\n" + prefix + "time=0.5 ms");
+        reply(prefix + "ttl=64 time<1 ms\n" + prefix + "ttl=64 time<1 ms", -2, 64);
+        reply(prefix + "ttl=64 time=2 ms\n" + prefix + "ttl=63 time=2 ms", 2, -1);
+        if (parseIcmpReply(prefix + "time=2 ms\n" + prefix + "time=9 ms", "1.1.1.1", true) == null)
+            throw new AssertionError("Conflicting echoes still disprove zero replies");
         reply(prefix + "ttl=64 time=2 ms", 2, 64);
         reject("64 bytes from 1.1.1.2: icmp_seq=1 time=2 ms");
         reject("64 bytes from 1.1.1.1: icmp_seq=10 time=2 ms");
