@@ -309,6 +309,9 @@ public final class PingService extends Service {
         Matcher lines=reply.matcher(output);
         while(lines.find()){
             String line=lines.group();
+            // A single echo reply cannot carry conflicting sequence fields.
+            Matcher sequences=Pattern.compile("\\bicmp_seq\\b",Pattern.CASE_INSENSITIVE).matcher(line);
+            if(!sequences.find()||sequences.find())continue;
             Matcher time=TIME.matcher(line);
             if(!time.find())continue;
             // A reply line must contain one unambiguous RTT token. Do not
