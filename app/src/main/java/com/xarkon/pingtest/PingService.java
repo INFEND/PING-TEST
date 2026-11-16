@@ -318,6 +318,9 @@ public final class PingService extends Service {
             // A single echo reply cannot carry conflicting sequence fields.
             Matcher sequences=Pattern.compile("\\bicmp_seq\\b",Pattern.CASE_INSENSITIVE).matcher(line);
             if(!sequences.find()||sequences.find())continue;
+            // A matching echo proves reception even if its RTT is missing or unusable.
+            // Evidence-only mode is used solely as a non-null guard against false loss.
+            if(firstEvidenceOnly)return new double[]{-1,-1};
             Matcher time=TIME.matcher(line);
             if(!time.find())continue;
             // A reply line must contain one unambiguous RTT token. Do not
@@ -338,7 +341,6 @@ public final class PingService extends Service {
                 if(ttl.find()&&!TTL.matcher(line).region(ttl.end(),line.length()).find())try{int parsedTtl=Integer.parseInt(ttl.group(1));
                     if(parsedTtl>=1&&parsedTtl<=255)replyTtl=parsedTtl;}
                     catch(NumberFormatException ignored){}
-                if(firstEvidenceOnly)return new double[]{latency,replyTtl};
                 if(accepted==null)accepted=new double[]{latency,replyTtl};
                 else if(Double.compare(accepted[0],latency)!=0)return null;
                 else if(accepted[1]!=replyTtl)accepted[1]=-1;

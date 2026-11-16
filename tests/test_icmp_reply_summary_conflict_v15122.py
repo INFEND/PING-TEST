@@ -6,7 +6,7 @@ SOURCE = (ROOT / "app/src/main/java/com/xarkon/pingtest/PingService.java").read_
 
 class ContradictoryReplyLossRegression(unittest.TestCase):
     def test_zero_received_summary_must_not_override_valid_echo(self):
-        self.assertIn('exitCode==1&&isConfirmedNoReply(output)&&parseIcmpReply(output,probeAddress)==null', SOURCE)
+        self.assertIn('exitCode==1&&isConfirmedNoReply(output)&&parseIcmpReply(output,probeAddress,true)==null', SOURCE)
         self.assertIn('else if(exitCode==1)error="Неоднозначный результат ping (код 1)"', SOURCE)
         self.assertIn('double[] parsed=((exitCode==0||receivedDespiteExitOne)&&!localFailure)', SOURCE)
 

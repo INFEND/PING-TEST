@@ -37,6 +37,13 @@ class IcmpParserBehavior(unittest.TestCase):
         reply(prefix + "ttl=64 ttl=32 time=2 ms", 2, -1);
         reply(prefix + "ttl=64 time<1 ms ttl=32", -2, -1);
         reject(prefix + "time<10 ms");
+        if (parseIcmpReply(prefix + "time<10 ms", "1.1.1.1", true) == null
+                || parseIcmpReply(prefix + "ttl=64", "1.1.1.1", true) == null
+                || parseIcmpReply(prefix + "time=2 ms time=90 ms", "1.1.1.1", true) == null)
+            throw new AssertionError("Unusable RTT must not erase matching echo evidence");
+        if (parseIcmpReply("64 bytes from 1.1.1.2: icmp_seq=1 time=2 ms", "1.1.1.1", true) != null
+                || parseIcmpReply(prefix + "icmp_seq=2 time=2 ms", "1.1.1.1", true) != null)
+            throw new AssertionError("Wrong address or ambiguous sequence is not matching evidence");
         reject(prefix + "time<0 ms");
         reject(prefix + "time<0,0 ms");
         reply(prefix + "time=0 ms", 0, -1);
