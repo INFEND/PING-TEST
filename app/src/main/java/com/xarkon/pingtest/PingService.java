@@ -133,6 +133,7 @@ public final class PingService extends Service {
     private ConnectivityManager routeMonitor;
     private ConnectivityManager.NetworkCallback routeCallback;
     private Network observedNetwork;
+    private Boolean observedVpn;
     private long routeGeneration, sessionGeneration;
 
     private void observeDefaultNetwork(ConnectivityManager.NetworkCallback source, Network network, boolean lost) {
@@ -142,8 +143,21 @@ public final class PingService extends Service {
             Network next=lost?null:network;
             if(!Objects.equals(observedNetwork,next)) {
                 observedNetwork=next;
+                observedVpn=null;
                 routeGeneration++;
             }
+        }
+    }
+
+    // A default Network handle can survive a change of VPN classification.
+    // Ignore unrelated capability updates (signal, bandwidth, validation).
+    private void observeDefaultCapabilities(ConnectivityManager.NetworkCallback source,
+                                            Network network, NetworkCapabilities capabilities) {
+        synchronized(LOCK) {
+            if(source!=routeCallback || !Objects.equals(observedNetwork,network))return;
+            boolean vpn=capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
+            if(observedVpn!=null && observedVpn.booleanValue()!=vpn)routeGeneration++;
+            observedVpn=vpn;
         }
     }
 
@@ -153,9 +167,13 @@ public final class PingService extends Service {
         ConnectivityManager.NetworkCallback callback=new ConnectivityManager.NetworkCallback(){
             @Override public void onAvailable(Network network){observeDefaultNetwork(this,network,false);}
             @Override public void onLost(Network network){observeDefaultNetwork(this,network,true);}
+            @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities capabilities){
+                observeDefaultCapabilities(this,network,capabilities);
+            }
         };
         synchronized(LOCK){
             observedNetwork=routeMonitor.getActiveNetwork();
+            observedVpn=null;
             routeCallback=callback;
         }
         try{routeMonitor.registerDefaultNetworkCallback(callback);}
