@@ -135,8 +135,9 @@ public final class PingService extends Service {
     private Network observedNetwork;
     private long routeGeneration, sessionGeneration;
 
-    private void observeDefaultNetwork(Network network, boolean lost) {
+    private void observeDefaultNetwork(ConnectivityManager.NetworkCallback source, Network network, boolean lost) {
         synchronized(LOCK) {
+            if(source!=routeCallback)return;
             if(lost && !Objects.equals(observedNetwork,network))return;
             Network next=lost?null:network;
             if(!Objects.equals(observedNetwork,next)) {
@@ -149,20 +150,30 @@ public final class PingService extends Service {
     private void startRouteMonitor() {
         routeMonitor=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
         if(routeMonitor==null)return;
-        synchronized(LOCK){observedNetwork=routeMonitor.getActiveNetwork();}
-        routeCallback=new ConnectivityManager.NetworkCallback(){
-            @Override public void onAvailable(Network network){observeDefaultNetwork(network,false);}
-            @Override public void onLost(Network network){observeDefaultNetwork(network,true);}
+        ConnectivityManager.NetworkCallback callback=new ConnectivityManager.NetworkCallback(){
+            @Override public void onAvailable(Network network){observeDefaultNetwork(this,network,false);}
+            @Override public void onLost(Network network){observeDefaultNetwork(this,network,true);}
         };
-        try{routeMonitor.registerDefaultNetworkCallback(routeCallback);}
-        catch(RuntimeException e){routeCallback=null;Log.w("PingService","Default network callback unavailable",e);}
+        synchronized(LOCK){
+            observedNetwork=routeMonitor.getActiveNetwork();
+            routeCallback=callback;
+        }
+        try{routeMonitor.registerDefaultNetworkCallback(callback);}
+        catch(RuntimeException e){
+            synchronized(LOCK){if(routeCallback==callback)routeCallback=null;}
+            Log.w("PingService","Default network callback unavailable",e);
+        }
     }
 
     private void stopRouteMonitor() {
-        if(routeMonitor!=null && routeCallback!=null){
-            try{routeMonitor.unregisterNetworkCallback(routeCallback);}catch(RuntimeException ignored){}
+        final ConnectivityManager.NetworkCallback callback;
+        synchronized(LOCK){
+            callback=routeCallback;
+            routeCallback=null;
         }
-        routeCallback=null;
+        if(routeMonitor!=null && callback!=null){
+            try{routeMonitor.unregisterNetworkCallback(callback);}catch(RuntimeException ignored){}
+        }
     }
     private volatile long runId=0;
     private volatile boolean stopping=false;
