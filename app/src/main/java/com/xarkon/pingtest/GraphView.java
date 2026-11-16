@@ -141,6 +141,7 @@ public final class GraphView extends View {
         float spacing=v.length>1?(right-left)/(v.length-1):0;
         // Reuse the fill path across up to 500 samples instead of allocating
         // hundreds of short-lived Path objects on every animation frame.
+        int previousColor=QualityColors.UNKNOWN;
         for(int i=0;i<v.length;i++){
             float x=v.length==1?left:left+i*spacing;
             if(!Float.isFinite(v[i])){
@@ -185,9 +186,11 @@ public final class GraphView extends View {
                 p.setStrokeCap(Paint.Cap.ROUND);
                 p.setStrokeWidth(Math.max(4f,4.4f*density));p.setColor((color&0x00ffffff)|0x26000000);
                 c.drawLine(px,py,x,y,p);
-                p.setStrokeWidth(Math.max(1.7f,2f*density));p.setColor(QualityColors.blend(QualityColors.rtt(v[i-1]),color,.5f));
+                p.setStrokeWidth(Math.max(1.7f,2f*density));p.setColor(QualityColors.blend(previousColor,color,.5f));
                 c.drawLine(px,py,x,y,p);
             }
+            // Only adjacent measured samples use this color; gaps never connect.
+            previousColor=color;
         }
         // Highlight only the actual latest sample. Searching backward for the
         // last successful reply incorrectly makes an older point look current
@@ -206,7 +209,7 @@ public final class GraphView extends View {
                 p.setStyle(Paint.Style.FILL);
             }else{
                 float y=bottom-(bottom-top)*Math.min(1f,Math.max(0,v[i]/max));
-                int col=QualityColors.rtt(v[i]);
+                int col=previousColor;
                 p.setColor((col&0x00ffffff)|0x35000000);c.drawCircle(x,y,6*density,p);
                 p.setColor(col);c.drawCircle(x,y,3*density,p);
             }
