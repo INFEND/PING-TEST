@@ -129,12 +129,48 @@ public final class PingService extends Service {
     // Network identity is stronger than the VPN/direct label: Wi-Fi to cellular
     // can change the actual ICMP path while both routes remain DIRECT.
     private volatile Network sessionNetwork;
+    // Default-network callbacks are scoped to this UID, not all device VPNs.
+    private ConnectivityManager routeMonitor;
+    private ConnectivityManager.NetworkCallback routeCallback;
+    private Network observedNetwork;
+    private long routeGeneration, sessionGeneration;
+
+    private void observeDefaultNetwork(Network network, boolean lost) {
+        synchronized(LOCK) {
+            if(lost && !Objects.equals(observedNetwork,network))return;
+            Network next=lost?null:network;
+            if(!Objects.equals(observedNetwork,next)) {
+                observedNetwork=next;
+                routeGeneration++;
+            }
+        }
+    }
+
+    private void startRouteMonitor() {
+        routeMonitor=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+        if(routeMonitor==null)return;
+        synchronized(LOCK){observedNetwork=routeMonitor.getActiveNetwork();}
+        routeCallback=new ConnectivityManager.NetworkCallback(){
+            @Override public void onAvailable(Network network){observeDefaultNetwork(network,false);}
+            @Override public void onLost(Network network){observeDefaultNetwork(network,true);}
+        };
+        try{routeMonitor.registerDefaultNetworkCallback(routeCallback);}
+        catch(RuntimeException e){routeCallback=null;Log.w("PingService","Default network callback unavailable",e);}
+    }
+
+    private void stopRouteMonitor() {
+        if(routeMonitor!=null && routeCallback!=null){
+            try{routeMonitor.unregisterNetworkCallback(routeCallback);}catch(RuntimeException ignored){}
+        }
+        routeCallback=null;
+    }
     private volatile long runId=0;
     private volatile boolean stopping=false;
     private long lastNotify=0, lastGraph=0;
 
     @Override public void onCreate() {
         super.onCreate();
+        startRouteMonitor();
         notify=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);
         if(Build.VERSION.SDK_INT>=26)notify.createNotificationChannel(new NotificationChannel(CHANNEL,"PING TEST · проверка сети",NotificationManager.IMPORTANCE_LOW));
     }
@@ -178,6 +214,8 @@ public final class PingService extends Service {
                 String route=vpn?"Сеть по умолчанию: VPN":selectedRoute==VpnGuard.Route.DIRECT?
                     "Сеть по умолчанию: без VPN":"Не определён";
                 ConnectivityManager connectivity=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
+                final long dnsGeneration;
+                synchronized(LOCK){dnsGeneration=routeGeneration;}
                 Network activeNetwork=connectivity==null?null:connectivity.getActiveNetwork();
                 // Resolve on this UID's active network, including split-tunnel VPN exclusions.
                 // DNS must use only the active network selected for this application's UID.
@@ -217,6 +255,9 @@ public final class PingService extends Service {
                     VpnGuard.Route publishRoute=VpnGuard.route(this);
                     if(!activeNetwork.equals(connectivity.getActiveNetwork()) || publishRoute!=effectiveRoute)
                         throw new UnknownHostException("Маршрут приложения изменился перед запуском ICMP");
+                    if(routeGeneration!=dnsGeneration)
+                        throw new UnknownHostException("Сеть приложения переключалась во время DNS");
+                    sessionGeneration=dnsGeneration;
                     sessionNetwork=activeNetwork;
                     sessionRoute=effectiveRoute;
                     live.vpnInfo=effectiveRoute==VpnGuard.Route.VPN?"VPN включён":
@@ -626,7 +667,7 @@ public final class PingService extends Service {
             Network afterRouteNetwork=commitCm==null?null:commitCm.getActiveNetwork();
             routeChangedAtCommit=sessionNetwork==null||!sessionNetwork.equals(commitNetwork)||
                 !sessionNetwork.equals(afterRouteNetwork)||
-                (commitRoute!=sessionRoute);
+                (commitRoute!=sessionRoute)||routeGeneration!=sessionGeneration;
             if(!routeChangedAtCommit){
             live.done++;
             // Checkpoint by committed completions, not request sequence: parallel replies can arrive out of order.
@@ -791,6 +832,7 @@ public final class PingService extends Service {
         stopSelf();
     }
     @Override public void onDestroy(){
+        stopRouteMonitor();
         boolean interrupted=false;
         if(!stopping){synchronized(LOCK){
             if(live.active && live.id==runId){
