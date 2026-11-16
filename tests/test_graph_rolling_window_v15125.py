@@ -8,7 +8,8 @@ GRAPH = (ROOT / "app/src/main/java/com/xarkon/pingtest/GraphView.java").read_tex
 
 class GraphRollingWindowTests(unittest.TestCase):
     def test_full_window_comparison(self):
-        self.assertIn("!Arrays.equals(points,fresh)", GRAPH)
+        self.assertIn("if(sameSamples(points,values)){", GRAPH)
+        self.assertIn("boolean newSample=points.length>0&&fresh.length>0;", GRAPH)
         self.assertNotIn("fresh[fresh.length-1]!=points[points.length-1]", GRAPH)
 
     def test_bounded_rtt_not_drawn_as_loss(self):

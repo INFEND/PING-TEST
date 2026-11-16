@@ -5,7 +5,6 @@ import android.content.Context;
 import android.graphics.*;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
-import java.util.Arrays;
 import java.util.List;
 
 /** Realtime RTT chart, quality-colored samples, error markers and animated latest sample. */
@@ -24,17 +23,18 @@ public final class GraphView extends View {
     public void setData(List<Float> values,int color,int background){
         // Dispatch-only updates often leave the chart unchanged. Avoid allocating
         // a new sample array or restarting animation for those monitor frames.
-        if(accent==color&&bg==background&&sameSamples(points,values))return;
-        float[] fresh=new float[values.size()];for(int i=0;i<fresh.length;i++)fresh[i]=values.get(i);
-        // Theme-only updates must not restart or settle an in-flight RTT animation.
-        if(Arrays.equals(points,fresh)){
+        // Compare once before allocating, including theme-only frames.
+        if(sameSamples(points,values)){
+            if(accent==color&&bg==background)return;
             accent=color;bg=background;
             invalidate();
             return;
         }
+        float[] fresh=new float[values.size()];int index=0;
+        for(float value:values)fresh[index++]=value;
         // A full rolling window can shift even when consecutive RTT values match.
         // Compare the entire visible window so repeated RTTs still animate as new samples.
-        boolean newSample=points.length>0&&fresh.length>0&&!Arrays.equals(points,fresh);
+        boolean newSample=points.length>0&&fresh.length>0;
         float last=points.length>0?points[points.length-1]:-1;
         // Continue from the visible RTT when a new frame interrupts animation.
         // Never interpolate across bounded replies, losses or unknown samples.
