@@ -21,6 +21,14 @@ public final class GraphView extends View {
     private final Path fillPath=new Path();
     public GraphView(Context c){super(c);}
     public void setData(List<Float> values,int color,int background){
+        // A settings-only refresh can disable motion without changing samples.
+        // Settle before the unchanged-frame fast path, including theme changes.
+        if(progress<1f&&!AppPrefs.bool(getContext(),"motion",true)){
+            if(animator!=null){animator.cancel();animator=null;}
+            progress=1f;
+            displayMax=scaleTarget;
+            invalidate();
+        }
         // Dispatch-only updates often leave the chart unchanged. Avoid allocating
         // a new sample array or restarting animation for those monitor frames.
         // Compare once before allocating, including theme-only frames.
