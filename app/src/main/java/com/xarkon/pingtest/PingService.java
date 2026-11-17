@@ -172,8 +172,20 @@ public final class PingService extends Service {
             }
         };
         synchronized(LOCK){
-            observedNetwork=routeMonitor.getActiveNetwork();
+            observedNetwork=null;
             observedVpn=null;
+            // Seed the VPN baseline before registration. The first callback
+            // can then detect a change on the same UID default network.
+            try {
+                Network initial=routeMonitor.getActiveNetwork();
+                NetworkCapabilities caps=initial==null?null:routeMonitor.getNetworkCapabilities(initial);
+                if(Objects.equals(initial,routeMonitor.getActiveNetwork())){
+                    observedNetwork=initial;
+                    if(caps!=null)observedVpn=caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
+                }
+            } catch(RuntimeException ignored) {
+                // Unknown baseline; callbacks and per-probe checks still apply.
+            }
             routeCallback=callback;
         }
         try{routeMonitor.registerDefaultNetworkCallback(callback);}
