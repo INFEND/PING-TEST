@@ -492,6 +492,8 @@ public final class PingService extends Service {
             text.contains("permission denied")||text.contains("operation not permitted")||
             text.contains("sendto:")||text.contains("sendmsg:")||
             text.contains("socket:")||text.contains("invalid argument")||
+            text.contains("unknown option")||text.contains("invalid option")||
+            text.contains("usage:")||
             text.contains("network is down"))return false;
         // A vendor may print "Request timeout" even when its own summary
         // reports that no echo was transmitted. Explicit zero transmission
@@ -663,7 +665,7 @@ public final class PingService extends Service {
                     ||diagnostics.contains("socket:")||diagnostics.contains("permission denied")
                     ||diagnostics.contains("operation not permitted")
                     ||diagnostics.contains("unknown option")||diagnostics.contains("invalid option")
-                    ||diagnostics.contains("usage:")
+                    ||diagnostics.contains("usage:")||diagnostics.contains("invalid argument")
                     // Native send errors contradict a successful echo, even with exit 0.
                     ||Pattern.compile("(?i)\\+\\s*[1-9]\\d*\\s+errors?\\b").matcher(output).find()
                     // A zero-received or zero-transmitted native summary contradicts

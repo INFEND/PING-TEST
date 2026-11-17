@@ -81,6 +81,9 @@ class IcmpParserBehavior(unittest.TestCase):
         loss("1 packets transmitted, 0 received\n1 packets transmitted, 0 received", true);
         loss("0 packets transmitted, 0 received", false);
         loss("Request timeout", false);
+        loss("unknown option -W\n1 packets transmitted, 0 received", false);
+        loss("invalid option\n1 packets transmitted, 0 received", false);
+        loss("Usage: ping\n1 packets transmitted, 0 received", false);
         loss("sendto: Permission denied\n1 packets transmitted, 0 received", false);
         loss("1 packets transmitted, 0 received, +1 errors", false);
         loss("1 packets transmitted, 0 received\n1 packets transmitted, 1 received", false);
