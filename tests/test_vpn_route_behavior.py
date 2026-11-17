@@ -69,9 +69,15 @@ public class RouteHarness {
   check(c, VpnGuard.Route.DIRECT);
   cm.caps.transports |= 1 << NetworkCapabilities.TRANSPORT_VPN;
   check(c, VpnGuard.Route.VPN);
+  // Contradictory capabilities must not trigger a false VPN warning.
+  cm.caps.notVpn = true;
+  check(c, VpnGuard.Route.UNKNOWN);
+  if (!VpnGuard.statusText(c).contains("НЕИЗВЕСТЕН")) throw new AssertionError("ambiguous route label");
+  cm.caps.notVpn = false;
   cm.caps.transports = 0;
   cm.caps.notVpn = true;
   check(c, VpnGuard.Route.DIRECT);
+  cm.caps.notVpn = false;
   // A stale VPN capability must not trigger a warning after a handover.
   cm.caps.transports = 1 << NetworkCapabilities.TRANSPORT_VPN;
   cm.switchDuringLookup = true;

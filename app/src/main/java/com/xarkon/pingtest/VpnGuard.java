@@ -29,6 +29,10 @@ public final class VpnGuard {
             // while the lookup was in progress. Do not publish a stale VPN badge.
             if(caps==null)return Route.UNKNOWN;
             if(!network.equals(cm.getActiveNetwork()))return Route.UNKNOWN;
+            // Contradictory vendor capabilities cannot establish a reliable route.
+            if(caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+                &&caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN))
+                return Route.UNKNOWN;
             if(caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN))
                 return Route.VPN;
             // A physical/non-VPN default network means that PING TEST does NOT
