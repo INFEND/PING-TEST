@@ -134,6 +134,7 @@ public final class PingService extends Service {
     private ConnectivityManager.NetworkCallback routeCallback;
     private Network observedNetwork;
     private Boolean observedVpn;
+    private Boolean observedBlocked;
     private long routeGeneration, sessionGeneration;
 
     private void observeDefaultNetwork(ConnectivityManager.NetworkCallback source, Network network, boolean lost) {
@@ -144,6 +145,7 @@ public final class PingService extends Service {
             if(!Objects.equals(observedNetwork,next)) {
                 observedNetwork=next;
                 observedVpn=null;
+                observedBlocked=null;
                 routeGeneration++;
             }
         }
@@ -161,12 +163,26 @@ public final class PingService extends Service {
         }
     }
 
+    // UID access can be blocked without changing the Network handle or VPN.
+    private void observeDefaultBlocked(ConnectivityManager.NetworkCallback source,
+                                       Network network, boolean blocked) {
+        synchronized(LOCK) {
+            if(source!=routeCallback || !Objects.equals(observedNetwork,network))return;
+            if(observedBlocked==null ? blocked : observedBlocked.booleanValue()!=blocked)
+                routeGeneration++;
+            observedBlocked=blocked;
+        }
+    }
+
     private void startRouteMonitor() {
         routeMonitor=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
         if(routeMonitor==null)return;
         ConnectivityManager.NetworkCallback callback=new ConnectivityManager.NetworkCallback(){
             @Override public void onAvailable(Network network){observeDefaultNetwork(this,network,false);}
             @Override public void onLost(Network network){observeDefaultNetwork(this,network,true);}
+            @Override public void onBlockedStatusChanged(Network network, boolean blocked){
+                observeDefaultBlocked(this,network,blocked);
+            }
             @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities capabilities){
                 observeDefaultCapabilities(this,network,capabilities);
             }
@@ -174,6 +190,7 @@ public final class PingService extends Service {
         synchronized(LOCK){
             observedNetwork=null;
             observedVpn=null;
+            observedBlocked=null;
             // Seed the VPN baseline before registration. The first callback
             // can then detect a change on the same UID default network.
             try {
