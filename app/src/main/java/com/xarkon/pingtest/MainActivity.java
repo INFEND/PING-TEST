@@ -312,10 +312,11 @@ public final class MainActivity extends Activity {
         last.update(s.last,false,sameSession);avg.update(s.avg(),false,sameSession);
         failed.update(s.ok+s.lost==0?-1:s.lossPct(),true,sameSession);
         if(qualityState!=null){
-            double ms=s.last==-2?0.5:s.last>=0?s.last:s.avg();
-            qualityState.setText(ms<0?(s.lost>0?"НЕТ ОТВЕТА":"ОЖИДАНИЕ"):
+            boolean bounded=s.last==-2;
+            double ms=s.last>=0?s.last:s.avg();
+            qualityState.setText(bounded?"ОТЛИЧНО":ms<0?(s.lost>0?"НЕТ ОТВЕТА":"ОЖИДАНИЕ"):
                 ms<=45?"ОТЛИЧНО":ms<=110?"СТАБИЛЬНО":ms<=240?"ПОВЫШЕННАЯ":"ВЫСОКАЯ");
-            qualityState.setTextColor(ms<0?(s.lost>0?QualityColors.RED:QualityColors.UNKNOWN):QualityColors.rtt(ms));
+            qualityState.setTextColor(bounded?QualityColors.GREEN:ms<0?(s.lost>0?QualityColors.RED:QualityColors.UNKNOWN):QualityColors.rtt(ms));
         }
         sendText.update(s.ok,s.sent,s.lost,sameSession);
         bestText.setText(s.timed==0?"—":fmt(s.min)+" мс");
@@ -548,7 +549,7 @@ public final class MainActivity extends Activity {
         String middle=e.latencyMs==-2?"<1 мс":answered?String.format(Locale.US,"%.1f мс",e.latencyMs):
             (e.message.isEmpty()?"Нет ответа":e.message);
         TextView response=Ui.text(this,middle,answered?13:11,
-            e.latencyMs==-2?QualityColors.UNKNOWN:answered?QualityColors.rtt(e.latencyMs):
+            e.latencyMs==-2?QualityColors.GREEN:answered?QualityColors.rtt(e.latencyMs):
             e.message.toLowerCase(Locale.ROOT).contains("пропуск")?QualityColors.YELLOW:QualityColors.RED,true);
         response.setGravity(Gravity.CENTER);
         response.setSingleLine(true);
@@ -773,7 +774,7 @@ public final class MainActivity extends Activity {
             boolean timed=good&&o.optDouble("avg",-1)>=0;
             boolean confirmedLoss=o.has("lost")?o.optInt("lost")>0:(o.has("done")?o.optInt("done"):o.optInt("sent"))>0;
             TextView m=Ui.text(this,good?(timed?fmt(o.optDouble("avg"))+" мс":"<1 мс"):confirmedLoss?"НЕТ ОТВЕТА":"НЕТ ДАННЫХ",12,
-                good?QualityColors.rtt(timed?o.optDouble("avg"):0.5):confirmedLoss?QualityColors.RED:QualityColors.UNKNOWN,true);r.addView(m);
+                good?(timed?QualityColors.rtt(o.optDouble("avg")):QualityColors.GREEN):confirmedLoss?QualityColors.RED:QualityColors.UNKNOWN,true);r.addView(m);
             card.addView(r);
             int sent=o.optInt("sent");int lost=o.optInt("lost");
             int completed=o.has("done")?o.optInt("done"):sent;
@@ -1153,7 +1154,7 @@ public final class MainActivity extends Activity {
         void update(double next,boolean percent,boolean animate){
             if(Double.compare(target,next)==0&&animate&&AppPrefs.bool(MainActivity.this,"motion",true))return;
             final double previous=target;target=next;
-            if(next==-2 && kind==0){if(motion!=null)motion.cancel();shown=next;setText("<1");setTextColor(QualityColors.rtt(0.5));return;}
+            if(next==-2 && kind==0){if(motion!=null)motion.cancel();shown=next;setText("<1");setTextColor(QualityColors.GREEN);return;}
             if(next<0||!Double.isFinite(next)){if(motion!=null)motion.cancel();shown=next;setText("—");setTextColor(QualityColors.UNKNOWN);return;}
             if(!animate||!AppPrefs.bool(MainActivity.this,"motion",true)||Double.isNaN(shown)||shown<0){
                 if(motion!=null)motion.cancel();
