@@ -531,7 +531,12 @@ public final class PingService extends Service {
         VpnGuard.Route launchRoute=VpnGuard.route(this);
         Network launchAfter=launchCm==null?null:launchCm.getActiveNetwork();
         if(stopping || capturedRun!=runId)return;
-        if(launchExpected==null || !launchExpected.equals(launchNetwork) ||
+        final boolean generationChanged;
+        synchronized(LOCK){
+            if(stopping || capturedRun!=runId)return;
+            generationChanged=routeGeneration!=sessionGeneration;
+        }
+        if(generationChanged || launchExpected==null || !launchExpected.equals(launchNetwork) ||
             !launchExpected.equals(launchAfter) ||
             (launchRoute!=sessionRoute)){
             finishRun(capturedRun,"Сеть приложения изменилась перед запуском ICMP. Начните новую проверку.");
