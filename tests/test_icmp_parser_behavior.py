@@ -70,6 +70,9 @@ class IcmpParserBehavior(unittest.TestCase):
         if (parseIcmpReply("64 bytes from 2001:db8::1: icmp_seq=1 time=2 ms", "2001:db8::1") == null)
             throw new AssertionError("Valid IPv6 reply");
         loss("1 packets transmitted, 0 received", true);
+        loss("1 packets transmitted, 0 received\n2 packets transmitted, 0 received", false);
+        loss("10 packets transmitted, 0 received\n1 packets transmitted, 0 received", false);
+        loss("1 packets transmitted, 0 received\n1 packets transmitted, 0 received", true);
         loss("0 packets transmitted, 0 received", false);
         loss("Request timeout", false);
         loss("sendto: Permission denied\n1 packets transmitted, 0 received", false);

@@ -519,7 +519,13 @@ public final class PingService extends Service {
         Pattern zeroReceived=Pattern.compile(
             "(?m)^\\s*1\\s+packets? transmitted,\\s*0\\s+(?:packets? )?received\\b",
             Pattern.CASE_INSENSITIVE);
-        return zeroReceived.matcher(output).find();
+        if(!zeroReceived.matcher(output).find())return false;
+        // This process sends exactly one echo. A conflicting multi-packet
+        // summary cannot establish the outcome of that individual probe.
+        Pattern multipleTransmitted=Pattern.compile(
+            "(?m)^\\s*(?:[2-9]|[1-9]\\d+)\\s+packets? transmitted\\b",
+            Pattern.CASE_INSENSITIVE);
+        return !multipleTransmitted.matcher(output).find();
     }
 
     private void probe(int seq,long capturedRun,String probeAddress,int probeBytes,int probeTtl,int probeTimeout){
