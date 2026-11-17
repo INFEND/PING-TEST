@@ -550,7 +550,21 @@ public final class PingService extends Service {
             process=new ProcessBuilder(cmd).redirectErrorStream(true).start();
             activePings.add(process);
             // STOP may race with process startup: never leave a newly spawned ping alive.
-            if(stopping || capturedRun!=runId)process.destroyForcibly();
+            final boolean staleLaunch;
+            synchronized(LOCK){
+                if(stopping || capturedRun!=runId){
+                    process.destroyForcibly();
+                    return;
+                }
+                staleLaunch=routeGeneration!=sessionGeneration;
+            }
+            // A handover can occur inside ProcessBuilder.start(). Abort before
+            // waiting for output; finally still removes and destroys the child.
+            if(staleLaunch){
+                process.destroyForcibly();
+                finishRun(capturedRun,"Сеть приложения изменилась при запуске ICMP. Начните новую проверку.");
+                return;
+            }
             // Drain stdout concurrently: waiting before reading can deadlock if
             // a vendor ping fills the OS pipe while the parent waits for exit.
             // Keep at most 8 KiB of diagnostics but continue draining the pipe.
