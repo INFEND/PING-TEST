@@ -11,7 +11,11 @@ bounded = re.search(r'if\(next==-2\s*&&\s*kind==0\)\{([^\n]+)\}', a)
 assert bounded, "Missing bounded RTT display branch"
 body = bounded.group(1)
 assert 'shown=next;' in body and 'setText("<1");' in body
-assert 'setTextColor(QualityColors.rtt(0.5));' in body and 'return;' in body
+assert 'setTextColor(QualityColors.GREEN);' in body and 'return;' in body
 assert body.index('motion.cancel()') < body.index('setText("<1");')
-assert "double ms=s.last==-2?0.5:s.last>=0?s.last:s.avg();" in a
+assert "boolean bounded=s.last==-2;" in a
+assert "double ms=s.last>=0?s.last:s.avg();" in a
+assert 'qualityState.setText(bounded?"ОТЛИЧНО"' in a
+assert "qualityState.setTextColor(bounded?QualityColors.GREEN" in a
+assert "QualityColors.rtt(0.5)" not in a
 print("Bounded RTT presentation: OK")
