@@ -528,6 +528,19 @@ public final class PingService extends Service {
         return !multipleTransmitted.matcher(output).find();
     }
 
+    /** A single-echo process cannot establish RTT from a multi-packet summary. */
+    private static boolean hasConflictingReplySummary(String output){
+        Pattern summary=Pattern.compile(
+            "(?m)^\\s*(\\d+)\\s+packets? transmitted(?:,\\s*(\\d+)\\s+(?:packets? )?received\\b)?",
+            Pattern.CASE_INSENSITIVE);
+        Matcher matches=summary.matcher(output);
+        while(matches.find()){
+            if(!"1".equals(matches.group(1)))return true;
+            if(matches.group(2)!=null&&!"1".equals(matches.group(2)))return true;
+        }
+        return false;
+    }
+
     private void probe(int seq,long capturedRun,String probeAddress,int probeBytes,int probeTtl,int probeTimeout){
         // Queued work can outlive a session or a network handover.
         if(stopping || capturedRun!=runId)return;
@@ -645,7 +658,7 @@ public final class PingService extends Service {
                 // Even exit code 0 can accompany a vendor-reported local send/socket
                 // failure. Such contradictory diagnostics must not publish RTT.
                 String diagnostics=output.toLowerCase(Locale.ROOT);
-                boolean localFailure=isNetworkFailure(output)||isDnsFailure(output)
+                boolean localFailure=hasConflictingReplySummary(output)||isNetworkFailure(output)||isDnsFailure(output)
                     ||diagnostics.contains("sendto:")||diagnostics.contains("sendmsg:")
                     ||diagnostics.contains("socket:")||diagnostics.contains("permission denied")
                     ||diagnostics.contains("operation not permitted")

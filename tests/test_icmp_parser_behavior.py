@@ -69,6 +69,12 @@ class IcmpParserBehavior(unittest.TestCase):
             throw new AssertionError("IPv6 prefix is not the selected address");
         if (parseIcmpReply("64 bytes from 2001:db8::1: icmp_seq=1 time=2 ms", "2001:db8::1") == null)
             throw new AssertionError("Valid IPv6 reply");
+        if (!hasConflictingReplySummary("2 packets transmitted, 1 received")
+                || !hasConflictingReplySummary("1 packets transmitted, 2 received")
+                || !hasConflictingReplySummary("1 packets transmitted, 1 received\n2 packets transmitted, 1 received")
+                || hasConflictingReplySummary("1 packets transmitted, 1 received")
+                || hasConflictingReplySummary(prefix + "time=2 ms"))
+            throw new AssertionError("Single-echo success summary policy");
         loss("1 packets transmitted, 0 received", true);
         loss("1 packets transmitted, 0 received\n2 packets transmitted, 0 received", false);
         loss("10 packets transmitted, 0 received\n1 packets transmitted, 0 received", false);
