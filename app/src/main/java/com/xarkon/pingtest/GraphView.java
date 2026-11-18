@@ -49,6 +49,10 @@ public final class GraphView extends View {
         if(progress<1f&&Float.isFinite(previous)&&previous>=0&&Float.isFinite(last)&&last>=0){
             last=previous+(last-previous)*progress;
         }
+        // A resized history is not necessarily a new packet. Never morph the
+        // newest retained RTT from a different snapshot when trimming or bulk loading.
+        boolean historyResize=fresh.length<points.length||fresh.length>points.length+1;
+        if(historyResize){last=-1;newSample=false;}
         previous=last;
         // Keep the Y axis stable across incoming packets. A sudden high RTT
         // must still fit, while downward rescaling waits for a meaningful drop.
