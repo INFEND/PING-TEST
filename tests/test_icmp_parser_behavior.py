@@ -37,6 +37,14 @@ class IcmpParserBehavior(unittest.TestCase):
         reply(prefix + "ttl=64 ttl=32 time=2 ms", 2, -1);
         reply(prefix + "ttl=64 time<1 ms ttl=32", -2, -1);
         reject(prefix + "time<10 ms");
+        reject(prefix + "time=2 s");
+        reject(prefix + "time=2 us");
+        reject(prefix + "time=2");
+        reject(prefix + "time<1 seconds");
+        reject(prefix + "time=2 ms/s");
+        reply(prefix + "time=2 MS", 2, -1);
+        if (parseIcmpReply(prefix + "time=2 s", "1.1.1.1", true) == null)
+            throw new AssertionError("Invalid units must not erase echo evidence");
         if (parseIcmpReply(prefix + "time<10 ms", "1.1.1.1", true) == null
                 || parseIcmpReply(prefix + "ttl=64", "1.1.1.1", true) == null
                 || parseIcmpReply(prefix + "time=2 ms time=90 ms", "1.1.1.1", true) == null)

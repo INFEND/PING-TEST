@@ -422,6 +422,8 @@ public final class PingService extends Service {
             if(firstEvidenceOnly)return new double[]{-1,-1};
             Matcher time=TIME.matcher(line);
             if(!time.find())continue;
+            // Only explicit millisecond units are valid; a matching echo still proves reception.
+            if(!Pattern.compile("[ \\t]+ms(?![\\w./+-])",Pattern.CASE_INSENSITIVE).matcher(line).region(time.end(),line.length()).lookingAt())continue;
             // A reply line must contain one unambiguous RTT token. Do not
             // silently choose the first of contradictory vendor diagnostics.
             if(TIME.matcher(line).region(time.end(),line.length()).find())continue;
