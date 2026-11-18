@@ -9,10 +9,10 @@ class DefaultCapabilitiesTest(unittest.TestCase):
         self.assertIn("observeDefaultCapabilities(this,network,capabilities);", SOURCE)
 
     def test_only_vpn_transition_changes_generation(self):
-        self.assertIn("capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)", SOURCE)
-        self.assertIn("if(observedVpn!=null && observedVpn.booleanValue()!=vpn)routeGeneration++;", SOURCE)
-        self.assertIn("observedVpn=vpn;", SOURCE)
-        self.assertIn("observedNetwork=next;\n                observedVpn=null;", SOURCE)
+        self.assertIn("VpnGuard.classify(capabilities)", SOURCE)
+        self.assertIn("if(observedRoute!=null && observedRoute!=route)routeGeneration++;", SOURCE)
+        self.assertIn("observedRoute=route;", SOURCE)
+        self.assertIn("observedNetwork=next;\n                observedRoute=null;", SOURCE)
 
 if __name__ == "__main__":
     unittest.main()

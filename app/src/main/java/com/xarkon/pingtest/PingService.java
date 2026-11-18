@@ -133,7 +133,7 @@ public final class PingService extends Service {
     private ConnectivityManager routeMonitor;
     private ConnectivityManager.NetworkCallback routeCallback;
     private Network observedNetwork;
-    private Boolean observedVpn;
+    private VpnGuard.Route observedRoute;
     private Boolean observedBlocked;
     private long routeGeneration, sessionGeneration;
 
@@ -144,7 +144,7 @@ public final class PingService extends Service {
             Network next=lost?null:network;
             if(!Objects.equals(observedNetwork,next)) {
                 observedNetwork=next;
-                observedVpn=null;
+                observedRoute=null;
                 observedBlocked=null;
                 routeGeneration++;
             }
@@ -157,9 +157,9 @@ public final class PingService extends Service {
                                             Network network, NetworkCapabilities capabilities) {
         synchronized(LOCK) {
             if(source!=routeCallback || !Objects.equals(observedNetwork,network))return;
-            boolean vpn=capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
-            if(observedVpn!=null && observedVpn.booleanValue()!=vpn)routeGeneration++;
-            observedVpn=vpn;
+            VpnGuard.Route route=VpnGuard.classify(capabilities);
+            if(observedRoute!=null && observedRoute!=route)routeGeneration++;
+            observedRoute=route;
         }
     }
 
@@ -189,7 +189,7 @@ public final class PingService extends Service {
         };
         synchronized(LOCK){
             observedNetwork=null;
-            observedVpn=null;
+            observedRoute=null;
             observedBlocked=null;
             // Seed the VPN baseline before registration. The first callback
             // can then detect a change on the same UID default network.
@@ -198,7 +198,7 @@ public final class PingService extends Service {
                 NetworkCapabilities caps=initial==null?null:routeMonitor.getNetworkCapabilities(initial);
                 if(Objects.equals(initial,routeMonitor.getActiveNetwork())){
                     observedNetwork=initial;
-                    if(caps!=null)observedVpn=caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
+                    if(caps!=null)observedRoute=VpnGuard.classify(caps);
                 }
             } catch(RuntimeException ignored) {
                 // Unknown baseline; callbacks and per-probe checks still apply.

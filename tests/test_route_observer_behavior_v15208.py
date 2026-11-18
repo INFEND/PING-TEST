@@ -17,14 +17,21 @@ public class RouteHarness {
     static class ConnectivityManager { static class NetworkCallback {} }
     static class NetworkCapabilities {
         static final int TRANSPORT_VPN=4;
-        boolean vpn;
+        boolean vpn, contradictory;
         NetworkCapabilities(boolean vpn){this.vpn=vpn;}
         boolean hasTransport(int transport){return vpn;}
+    }
+    static class VpnGuard {
+        enum Route { VPN, DIRECT, UNKNOWN }
+        static Route classify(NetworkCapabilities caps){
+            return caps.contradictory?Route.UNKNOWN:caps.vpn?Route.VPN:Route.DIRECT;
+        }
     }
     static final Object LOCK=new Object();
     ConnectivityManager.NetworkCallback routeCallback;
     Network observedNetwork;
-    Boolean observedVpn, observedBlocked;
+    VpnGuard.Route observedRoute;
+    Boolean observedBlocked;
     long routeGeneration;
 """ + SOURCE[start:end] + """
     void expect(long expected){
@@ -45,12 +52,17 @@ public class RouteHarness {
         h.observeDefaultBlocked(c,a,false); h.expect(3);
         h.observeDefaultCapabilities(c,a,new NetworkCapabilities(false)); h.expect(3);
         h.observeDefaultCapabilities(c,a,new NetworkCapabilities(true)); h.expect(4);
-        h.observeDefaultNetwork(c,b,false); h.expect(5);
-        h.observeDefaultNetwork(c,a,true); h.expect(5);
-        h.observeDefaultBlocked(c,b,true); h.expect(6);
-        h.observeDefaultBlocked(c,b,false); h.expect(7);
+        NetworkCapabilities ambiguous=new NetworkCapabilities(true);
+        ambiguous.contradictory=true;
+        h.observeDefaultCapabilities(c,a,ambiguous); h.expect(5);
+        h.observeDefaultCapabilities(c,a,ambiguous); h.expect(5);
+        h.observeDefaultCapabilities(c,a,new NetworkCapabilities(true)); h.expect(6);
+        h.observeDefaultNetwork(c,b,false); h.expect(7);
+        h.observeDefaultNetwork(c,a,true); h.expect(7);
+        h.observeDefaultBlocked(c,b,true); h.expect(8);
+        h.observeDefaultBlocked(c,b,false); h.expect(9);
         h.routeCallback=null;
-        h.observeDefaultBlocked(c,b,true); h.expect(7);
+        h.observeDefaultBlocked(c,b,true); h.expect(9);
     }
 }
 """

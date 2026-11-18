@@ -29,23 +29,29 @@ public final class VpnGuard {
             // while the lookup was in progress. Do not publish a stale VPN badge.
             if(caps==null)return Route.UNKNOWN;
             if(!network.equals(cm.getActiveNetwork()))return Route.UNKNOWN;
-            // Contradictory vendor capabilities cannot establish a reliable route.
-            if(caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
-                &&caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN))
-                return Route.UNKNOWN;
-            if(caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN))
-                return Route.VPN;
-            // A physical/non-VPN default network means that PING TEST does NOT
-            // use the VPN, even if other applications still do.
-            if(caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-                ||caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-                ||caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
-                ||caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
-                ||caps.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH))
-                return Route.DIRECT;
+            return classify(caps);
         }catch(RuntimeException ignored){
             // Fail to an honest unknown, not to a fabricated VPN warning.
         }
+        return Route.UNKNOWN;
+    }
+
+    static Route classify(NetworkCapabilities caps){
+        if(caps==null)return Route.UNKNOWN;
+    // Contradictory vendor capabilities cannot establish a reliable route.
+    if(caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+        &&caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN))
+        return Route.UNKNOWN;
+    if(caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN))
+        return Route.VPN;
+    // A physical/non-VPN default network means that PING TEST does NOT
+    // use the VPN, even if other applications still do.
+    if(caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+        ||caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        ||caps.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+        ||caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)
+        ||caps.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH))
+        return Route.DIRECT;
         return Route.UNKNOWN;
     }
 
