@@ -9,7 +9,7 @@ class InitialRouteBaselineTest(unittest.TestCase):
         self.assertIn("Network initial=routeMonitor.getActiveNetwork();", block)
         self.assertIn("if(Objects.equals(initial,routeMonitor.getActiveNetwork()))", block)
         self.assertIn("if(caps!=null)observedRoute=VpnGuard.classify(caps);", block)
-        self.assertLess(block.index("observedRoute=caps.hasTransport"), block.index("registerDefaultNetworkCallback(callback)"))
+        self.assertLess(block.index("if(caps!=null)observedRoute=VpnGuard.classify(caps);"), block.index("registerDefaultNetworkCallback(callback)"))
         self.assertNotIn("getAllNetworks", block)
 
     def test_unknown_baseline_is_not_direct(self):
