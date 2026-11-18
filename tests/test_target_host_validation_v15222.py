@@ -12,10 +12,10 @@ class TargetHostValidation(unittest.TestCase):
         end = SOURCE.index("    public static void save(", start)
         harness = r'''
     public static void main(String[] args) {
-        String[] good = {"localhost", "example.com", "example.com.", "a_b.local",
+        String[] good = {"localhost", "123.local", "node123", "example.com", "example.com.", "a_b.local",
             "1.1.1.1", "255.255.255.255", "::1", "[2001:db8::1]", "::ffff:192.0.2.1"};
         String[] bad = {null, "", "example.com:443", "[example.com]", "[1.1.1.1]",
-            "[::1]:443", "1.2.3.999", "127.1", "01.2.3.4", "1.2.3.4.",
+            "[::1]:443", "1.2.3.999", "127.1", "2130706433", "127", "0", "123.", "01.2.3.4", "1.2.3.4.",
             "a..b", "-a.example", "a-.example", "a/b", "a\nb", "a b",
             "2001:::1", "[]", "[::1", "a".repeat(64)+".com"};
         for(String value:good)if(!validHost(value))throw new AssertionError("Rejected: "+value);

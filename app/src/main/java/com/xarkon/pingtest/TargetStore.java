@@ -76,7 +76,7 @@ public final class TargetStore {
         if(bracketed)return false;
         String name=s.endsWith(".")?s.substring(0,s.length()-1):s;
         if(name.isEmpty()||name.length()>253)return false;
-        if(name.matches("[0-9.]+")&&name.indexOf('.')>=0){
+        if(name.matches("[0-9.]+")){
             // Reject ambiguous shorthand and out-of-range IPv4 addresses.
             if(s.endsWith("."))return false;
             String[] parts=name.split("\\.",-1);
