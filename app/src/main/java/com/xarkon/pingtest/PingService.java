@@ -135,6 +135,7 @@ public final class PingService extends Service {
     private Network observedNetwork;
     private VpnGuard.Route observedRoute;
     private Boolean observedBlocked;
+    private LinkProperties observedLink;
     private long routeGeneration, sessionGeneration;
 
     private void observeDefaultNetwork(ConnectivityManager.NetworkCallback source, Network network, boolean lost) {
@@ -146,6 +147,7 @@ public final class PingService extends Service {
                 observedNetwork=next;
                 observedRoute=null;
                 observedBlocked=null;
+                observedLink=null;
                 routeGeneration++;
             }
         }
@@ -174,6 +176,22 @@ public final class PingService extends Service {
         }
     }
 
+    // Only routing-relevant fields: DNS or proxy updates alone do not invalidate ICMP.
+    private static boolean sameIcmpPath(LinkProperties a, LinkProperties b) {
+        return Objects.equals(a.getInterfaceName(),b.getInterfaceName())
+            && new HashSet<>(a.getLinkAddresses()).equals(new HashSet<>(b.getLinkAddresses()))
+            && new HashSet<>(a.getRoutes()).equals(new HashSet<>(b.getRoutes()));
+    }
+
+    private void observeDefaultLink(ConnectivityManager.NetworkCallback source,
+                                    Network network, LinkProperties properties) {
+        synchronized(LOCK) {
+            if(source!=routeCallback || !Objects.equals(observedNetwork,network))return;
+            if(observedLink!=null && !sameIcmpPath(observedLink,properties))routeGeneration++;
+            observedLink=new LinkProperties(properties);
+        }
+    }
+
     private void startRouteMonitor() {
         routeMonitor=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
         if(routeMonitor==null)return;
@@ -183,6 +201,9 @@ public final class PingService extends Service {
             @Override public void onBlockedStatusChanged(Network network, boolean blocked){
                 observeDefaultBlocked(this,network,blocked);
             }
+            @Override public void onLinkPropertiesChanged(Network network, LinkProperties properties){
+                observeDefaultLink(this,network,properties);
+            }
             @Override public void onCapabilitiesChanged(Network network, NetworkCapabilities capabilities){
                 observeDefaultCapabilities(this,network,capabilities);
             }
@@ -191,13 +212,16 @@ public final class PingService extends Service {
             observedNetwork=null;
             observedRoute=null;
             observedBlocked=null;
+            observedLink=null;
             // Seed the VPN baseline before registration. The first callback
             // can then detect a change on the same UID default network.
             try {
                 Network initial=routeMonitor.getActiveNetwork();
                 NetworkCapabilities caps=initial==null?null:routeMonitor.getNetworkCapabilities(initial);
+                LinkProperties link=initial==null?null:routeMonitor.getLinkProperties(initial);
                 if(Objects.equals(initial,routeMonitor.getActiveNetwork())){
                     observedNetwork=initial;
+                    if(link!=null)observedLink=new LinkProperties(link);
                     if(caps!=null)observedRoute=VpnGuard.classify(caps);
                 }
             } catch(RuntimeException ignored) {
