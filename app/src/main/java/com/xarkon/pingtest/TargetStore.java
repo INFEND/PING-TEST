@@ -61,9 +61,35 @@ public final class TargetStore {
         return host;
     }
     public static boolean validHost(String s){
-        if(s==null||s.length()<1||s.length()>253||s.contains("/")||s.contains("@")||s.contains(" ")||s.contains("://"))return false;
-        if(s.startsWith("[")&&s.endsWith("]"))return s.length()>2;
-        return s.matches("(?i)[a-z0-9._:-]+") && !s.startsWith("-") && !s.endsWith("-");
+        if(s==null||s.isEmpty()||s.length()>254)return false;
+        // A colon denotes a numeric IPv6 literal, never a hostname with a port.
+        boolean bracketed=s.startsWith("[")&&s.endsWith("]");
+        String literal=bracketed?s.substring(1,s.length()-1):s;
+        if(literal.indexOf(':')>=0){
+            if(!literal.matches("[0-9a-fA-F:.]+"))return false;
+            try{
+                // Java parses colon-containing numeric literals locally, without DNS.
+                java.net.InetAddress.getByName(literal);
+                return true;
+            }catch(java.net.UnknownHostException e){return false;}
+        }
+        if(bracketed)return false;
+        String name=s.endsWith(".")?s.substring(0,s.length()-1):s;
+        if(name.isEmpty()||name.length()>253)return false;
+        if(name.matches("[0-9.]+")&&name.indexOf('.')>=0){
+            // Reject ambiguous shorthand and out-of-range IPv4 addresses.
+            if(s.endsWith("."))return false;
+            String[] parts=name.split("\\.",-1);
+            if(parts.length!=4)return false;
+            for(String part:parts){
+                if(!part.matches("0|[1-9][0-9]{0,2}")||Integer.parseInt(part)>255)return false;
+            }
+            return true;
+        }
+        for(String label:name.split("\\.",-1)){
+            if(!label.matches("[a-zA-Z0-9_](?:[a-zA-Z0-9_-]{0,61}[a-zA-Z0-9_])?"))return false;
+        }
+        return true;
     }
     public static void save(Context c,Target previous,String name,String host){
         try{JSONArray current=new JSONArray(AppPrefs.string(c,"custom_targets","[]"));JSONArray next=new JSONArray();
