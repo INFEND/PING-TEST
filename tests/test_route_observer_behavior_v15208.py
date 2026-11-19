@@ -12,8 +12,18 @@ class RouteObserverBehavior(unittest.TestCase):
         end = SOURCE.index("    private void startRouteMonitor()", start)
         java = """
 import java.util.Objects;
+import java.util.HashSet;
+import java.util.List;
 public class RouteHarness {
     static class Network {}
+    static class LinkProperties {
+        String iface;
+        LinkProperties(String iface){this.iface=iface;}
+        LinkProperties(LinkProperties other){this.iface=other.iface;}
+        String getInterfaceName(){return iface;}
+        List<String> getLinkAddresses(){return List.of();}
+        List<String> getRoutes(){return List.of();}
+    }
     static class ConnectivityManager { static class NetworkCallback {} }
     static class NetworkCapabilities {
         static final int TRANSPORT_VPN=4;
@@ -32,6 +42,7 @@ public class RouteHarness {
     Network observedNetwork;
     VpnGuard.Route observedRoute;
     Boolean observedBlocked;
+    LinkProperties observedLink;
     long routeGeneration;
 """ + SOURCE[start:end] + """
     void expect(long expected){
@@ -61,8 +72,19 @@ public class RouteHarness {
         h.observeDefaultNetwork(c,a,true); h.expect(7);
         h.observeDefaultBlocked(c,b,true); h.expect(8);
         h.observeDefaultBlocked(c,b,false); h.expect(9);
+        LinkProperties link=new LinkProperties("wlan0");
+        h.observeDefaultLink(c,b,link); h.expect(9);
+        h.observeDefaultLink(c,b,new LinkProperties("wlan0")); h.expect(9);
+        h.observeDefaultLink(stale,b,new LinkProperties("tun0")); h.expect(9);
+        h.observeDefaultLink(c,a,new LinkProperties("tun0")); h.expect(9);
+        link.iface="tun0";
+        h.observeDefaultLink(c,b,link); h.expect(10);
+        h.observeDefaultLink(c,b,link); h.expect(10);
+        h.observeDefaultNetwork(c,a,false); h.expect(11);
+        h.observeDefaultLink(c,a,new LinkProperties("wlan0")); h.expect(11);
         h.routeCallback=null;
-        h.observeDefaultBlocked(c,b,true); h.expect(9);
+        h.observeDefaultBlocked(c,a,true); h.expect(11);
+        h.observeDefaultLink(c,a,new LinkProperties("tun0")); h.expect(11);
     }
 }
 """
