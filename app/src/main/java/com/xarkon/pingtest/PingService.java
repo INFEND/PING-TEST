@@ -135,7 +135,7 @@ public final class PingService extends Service {
     private Network observedNetwork;
     private VpnGuard.Route observedRoute;
     private Boolean observedBlocked;
-    private LinkProperties observedLink;
+    private IcmpPath observedLink;
     private long routeGeneration, sessionGeneration;
 
     private void observeDefaultNetwork(ConnectivityManager.NetworkCallback source, Network network, boolean lost) {
@@ -177,18 +177,29 @@ public final class PingService extends Service {
     }
 
     // Only routing-relevant fields: DNS or proxy updates alone do not invalidate ICMP.
-    private static boolean sameIcmpPath(LinkProperties a, LinkProperties b) {
-        return Objects.equals(a.getInterfaceName(),b.getInterfaceName())
-            && new HashSet<>(a.getLinkAddresses()).equals(new HashSet<>(b.getLinkAddresses()))
-            && new HashSet<>(a.getRoutes()).equals(new HashSet<>(b.getRoutes()));
+    private static final class IcmpPath {
+        final String iface;
+        final HashSet<?> addresses, routes;
+        IcmpPath(LinkProperties properties) {
+            iface=properties.getInterfaceName();
+            addresses=new HashSet<>(properties.getLinkAddresses());
+            routes=new HashSet<>(properties.getRoutes());
+        }
+    }
+
+    private static boolean sameIcmpPath(IcmpPath a, IcmpPath b) {
+        return Objects.equals(a.iface,b.iface)
+            && a.addresses.equals(b.addresses)
+            && a.routes.equals(b.routes);
     }
 
     private void observeDefaultLink(ConnectivityManager.NetworkCallback source,
                                     Network network, LinkProperties properties) {
         synchronized(LOCK) {
             if(source!=routeCallback || !Objects.equals(observedNetwork,network))return;
-            if(observedLink!=null && !sameIcmpPath(observedLink,properties))routeGeneration++;
-            observedLink=new LinkProperties(properties);
+            IcmpPath next=new IcmpPath(properties);
+            if(observedLink!=null && !sameIcmpPath(observedLink,next))routeGeneration++;
+            observedLink=next;
         }
     }
 
@@ -221,7 +232,7 @@ public final class PingService extends Service {
                 LinkProperties link=initial==null?null:routeMonitor.getLinkProperties(initial);
                 if(Objects.equals(initial,routeMonitor.getActiveNetwork())){
                     observedNetwork=initial;
-                    if(link!=null)observedLink=new LinkProperties(link);
+                    if(link!=null)observedLink=new IcmpPath(link);
                     if(caps!=null)observedRoute=VpnGuard.classify(caps);
                 }
             } catch(RuntimeException ignored) {

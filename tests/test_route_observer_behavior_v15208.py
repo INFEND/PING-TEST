@@ -19,7 +19,6 @@ public class RouteHarness {
     static class LinkProperties {
         String iface;
         LinkProperties(String iface){this.iface=iface;}
-        LinkProperties(LinkProperties other){this.iface=other.iface;}
         String getInterfaceName(){return iface;}
         List<String> getLinkAddresses(){return List.of();}
         List<String> getRoutes(){return List.of();}
@@ -42,7 +41,7 @@ public class RouteHarness {
     Network observedNetwork;
     VpnGuard.Route observedRoute;
     Boolean observedBlocked;
-    LinkProperties observedLink;
+    IcmpPath observedLink;
     long routeGeneration;
 """ + SOURCE[start:end] + """
     void expect(long expected){
