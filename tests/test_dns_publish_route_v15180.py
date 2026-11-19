@@ -8,7 +8,12 @@ class DnsPublishRouteTest(unittest.TestCase):
         section = SOURCE.split("// Publish the network atomically", 1)[1].split("sessionNetwork=activeNetwork;", 1)[0]
         self.assertIn("synchronized(LOCK)", section)
         self.assertIn("runId!=expectedRun", section)
-        self.assertEqual(section.count("activeNetwork.equals(connectivity.getActiveNetwork())"), 2)
+        identity = "activeNetwork.equals(connectivity.getActiveNetwork())"
+        route = section.index("VpnGuard.Route publishRoute")
+        path = section.index("IcmpPath publishPath=readIcmpPath")
+        self.assertIn(identity, section[:route])
+        self.assertIn(identity, section[route:path])
+        self.assertIn(identity, section[path:])
         self.assertIn("VpnGuard.Route publishRoute=VpnGuard.route(this);", section)
         self.assertIn("publishRoute!=effectiveRoute", section)
         self.assertLess(section.index("runId!=expectedRun"), section.index("VpnGuard.Route publishRoute"))

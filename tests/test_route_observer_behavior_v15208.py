@@ -23,7 +23,11 @@ public class RouteHarness {
         List<String> getLinkAddresses(){return List.of();}
         List<String> getRoutes(){return List.of();}
     }
-    static class ConnectivityManager { static class NetworkCallback {} }
+    static class ConnectivityManager {
+        static class NetworkCallback {}
+        LinkProperties properties;
+        LinkProperties getLinkProperties(Network network){return properties;}
+    }
     static class NetworkCapabilities {
         static final int TRANSPORT_VPN=4;
         boolean vpn, contradictory;
@@ -49,6 +53,14 @@ public class RouteHarness {
     }
     public static void main(String[] args){
         RouteHarness h=new RouteHarness();
+        ConnectivityManager cm=new ConnectivityManager();
+        Network probe=new Network();
+        if(readIcmpPath(cm,probe)!=null)throw new AssertionError("missing properties");
+        cm.properties=new LinkProperties("wlan0");
+        IcmpPath before=readIcmpPath(cm,probe);
+        cm.properties.iface="tun0";
+        if(sameIcmpPath(before,readIcmpPath(cm,probe)))throw new AssertionError("mutable path snapshot");
+        if(readIcmpPath(null,probe)!=null||readIcmpPath(cm,null)!=null)throw new AssertionError("missing network");
         Network a=new Network(), b=new Network();
         ConnectivityManager.NetworkCallback c=new ConnectivityManager.NetworkCallback();
         ConnectivityManager.NetworkCallback stale=new ConnectivityManager.NetworkCallback();
