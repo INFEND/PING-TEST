@@ -121,8 +121,13 @@ public final class GraphView extends View {
         renderWithScale(c,w,h,v,accent,background,axisMaximum(v));
     }
     private static float axisMaximum(float[] v){
-        float highest=30f;
-        for(float r:v)if(Float.isFinite(r)&&r>highest)highest=r;
+        // Do not flatten genuine sub-millisecond RTTs against a 30 ms floor.
+        // Bounded '<1 ms' replies (-2) are markers, not measured zeroes.
+        float highest=0f;
+        for(float r:v)if(Float.isFinite(r)&&r>=0&&r>highest)highest=r;
+        if(highest<=0f)return 3f;
+        if(highest<1f)return 1f;
+        highest=Math.max(3f,highest);
         double power=Math.pow(10,Math.floor(Math.log10(highest/3.0)));
         float step=(float)(Math.ceil((highest*1.14/3.0)/power)*power);
         return Math.max(3f,step*3f);
@@ -146,7 +151,10 @@ public final class GraphView extends View {
             p.setColor(0xff28303a);c.drawLine(left,y,right,y,p);
             p.setColor(0xff8b98a5);p.setTextSize(10*density);
             // RTT axis is nonnegative; integer rounding avoids a Formatter per tick/frame.
-            c.drawText(Long.toString(Math.round((double)(max*(3-k)/3))),4*density,y+3*density,p);
+            float tick=max*(3-k)/3f;
+            String tickLabel=max<=3f ? Float.toString(Math.round(tick*10f)/10f)
+                    : Long.toString(Math.round((double)tick));
+            c.drawText(tickLabel,4*density,y+3*density,p);
         }
         if(v.length==0){p.setColor(0xff9ba8b1);p.setTextSize(12*density);
             c.drawText("Ожидание измерений",left+10*density,h/2f,p);return;}
