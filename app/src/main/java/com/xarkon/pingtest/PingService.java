@@ -129,6 +129,8 @@ public final class PingService extends Service {
     // Network identity is stronger than the VPN/direct label: Wi-Fi to cellular
     // can change the actual ICMP path while both routes remain DIRECT.
     private volatile Network sessionNetwork;
+    // Guarded by LOCK; independent of callback delivery latency.
+    private IcmpPath sessionPath;
     // Default-network callbacks are scoped to this UID, not all device VPNs.
     private ConnectivityManager routeMonitor;
     private ConnectivityManager.NetworkCallback routeCallback;
@@ -201,6 +203,12 @@ public final class PingService extends Service {
             if(observedLink!=null && !sameIcmpPath(observedLink,next))routeGeneration++;
             observedLink=next;
         }
+    }
+
+    private static IcmpPath readIcmpPath(ConnectivityManager cm, Network network) {
+        if(cm==null||network==null)return null;
+        LinkProperties properties=cm.getLinkProperties(network);
+        return properties==null?null:new IcmpPath(properties);
     }
 
     private void startRouteMonitor() {
@@ -313,6 +321,7 @@ public final class PingService extends Service {
                 // Resolve on this UID's active network, including split-tunnel VPN exclusions.
                 // DNS must use only the active network selected for this application's UID.
                 if(activeNetwork==null)throw new UnknownHostException("Сеть приложения не определена");
+                IcmpPath dnsPath=readIcmpPath(connectivity,activeNetwork);
                 InetAddress[] resolved=activeNetwork.getAllByName(chosen);
                 if(resolved.length==0)throw new UnknownHostException(chosen);
                 // Reject DNS results from a network that disappeared during resolution.
@@ -350,6 +359,12 @@ public final class PingService extends Service {
                         throw new UnknownHostException("Маршрут приложения изменился перед запуском ICMP");
                     if(routeGeneration!=dnsGeneration)
                         throw new UnknownHostException("Сеть приложения переключалась во время DNS");
+                    IcmpPath publishPath=readIcmpPath(connectivity,activeNetwork);
+                    if(dnsPath!=null&&(publishPath==null||!sameIcmpPath(dnsPath,publishPath)))
+                        throw new UnknownHostException("Маршрут ICMP изменился во время DNS");
+                    if(!activeNetwork.equals(connectivity.getActiveNetwork()))
+                        throw new UnknownHostException("Сеть приложения изменилась при проверке ICMP");
+                    sessionPath=publishPath;
                     sessionGeneration=dnsGeneration;
                     sessionNetwork=activeNetwork;
                     sessionRoute=effectiveRoute;
@@ -799,10 +814,12 @@ public final class PingService extends Service {
             VpnGuard.Route commitRoute=VpnGuard.route(this);
             // Route inspection performs its own network lookup. A handover
             // between these calls must not let a stale ICMP result through.
+            IcmpPath commitPath=readIcmpPath(commitCm,commitNetwork);
             Network afterRouteNetwork=commitCm==null?null:commitCm.getActiveNetwork();
             routeChangedAtCommit=sessionNetwork==null||!sessionNetwork.equals(commitNetwork)||
                 !sessionNetwork.equals(afterRouteNetwork)||
-                (commitRoute!=sessionRoute)||routeGeneration!=sessionGeneration;
+                (commitRoute!=sessionRoute)||routeGeneration!=sessionGeneration||
+                (sessionPath!=null&&(commitPath==null||!sameIcmpPath(sessionPath,commitPath)));
             if(!routeChangedAtCommit){
             live.done++;
             // Checkpoint by committed completions, not request sequence: parallel replies can arrive out of order.
