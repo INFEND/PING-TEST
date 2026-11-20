@@ -645,7 +645,8 @@ public final class MainActivity extends Activity {
         actions.addView(copy,new LinearLayout.LayoutParams(0,Ui.dp(44),1));
         LinearLayout.LayoutParams after=new LinearLayout.LayoutParams(0,Ui.dp(44),1);after.leftMargin=Ui.dp(8);
         actions.addView(close,after);frame.addView(actions);
-        copy.setOnClickListener(v->copy(String.join("\n",PingService.snapshot().log)));
+        copy.setOnClickListener(v->copy(String.join("
+",PingService.snapshot().log)));
         close.setOnClickListener(v->dialog.dismiss());
         dialog.setOnDismissListener(d->{handler.removeCallbacks(journalTick);
             stopJournalScrollAnimation();
@@ -791,7 +792,12 @@ public final class MainActivity extends Activity {
             badges.addView(routeBadge,badgeGap);
             card.addView(badges,Ui.margins(-1,-2,0,5));
             card.addView(Ui.text(this,date(o.optLong("time"))+"   ·   "+o.optInt("ok")+" / "+sent,11,Ui.muted(),false));
-            // One accessible summary for the entire tappable history entry.\n            card.setContentDescription(o.optString("label",TargetStore.friendly(this,o.optString("host","—")))\n                + ", " + m.getText() + ", " + lossLabel.getText() + ", " + routeLabel\n                + ", " + date(o.optLong("time")) + ", " + ok + " из " + sent + " ответов");\n            card.setFocusable(true);\n            card.setOnClickListener(v->historyDetails(o));card.setOnLongClickListener(v->{new AlertDialog.Builder(this).setTitle("Удалить сеанс?")
+            // One accessible summary for the entire tappable history entry.
+            card.setContentDescription(o.optString("label",TargetStore.friendly(this,o.optString("host","—")))
+                + ", " + m.getText() + ", " + lossLabel.getText() + ", " + routeLabel
+                + ", " + date(o.optLong("time")) + ", " + ok + " из " + sent + " ответов");
+            card.setFocusable(true);
+            card.setOnClickListener(v->historyDetails(o));card.setOnLongClickListener(v->{new AlertDialog.Builder(this).setTitle("Удалить сеанс?")
                 .setNegativeButton("Отмена",null).setPositiveButton("Удалить",(d,w)->{if(HistoryStore.removeEntry(this,historyIndex,o))showTab(1);
                      else toast("Запись изменилась. Обновите историю.");}).show();return true;});
             page.addView(card,Ui.margins(-1,-2,0,9));
@@ -819,26 +825,36 @@ public final class MainActivity extends Activity {
         String routeLabel=routeLabelFromInfo(route);
         org.json.JSONArray savedEvents=obj.optJSONArray("events");
         boolean structured=savedEvents!=null&&savedEvents.length()>0;
-        StringBuilder report=new StringBuilder(label).append("\n").append(date(obj.optLong("time")))
-            .append("\nМаршрут: ").append(routeLabel).append("\nОтправлено: ").append(sent)
-            .append("\nОтветов: ").append(ok).append("\n")
+        StringBuilder report=new StringBuilder(label).append("
+").append(date(obj.optLong("time")))
+            .append("
+Маршрут: ").append(routeLabel).append("
+Отправлено: ").append(sent)
+            .append("
+Ответов: ").append(ok).append("
+")
             .append(method.startsWith("TCP")?"Сбоев: ":"Потерь: ").append(lost)
-            .append("\nПропущено: ").append(obj.optInt("skipped"));
+            .append("
+Пропущено: ").append(obj.optInt("skipped"));
         if(structured){
-            report.append("\nСохранённые события:");
+            report.append("
+Сохранённые события:");
             for(int i=0;i<savedEvents.length();i++){
                 JSONObject event=savedEvents.optJSONObject(i);
                 if(event==null)continue;
-                report.append("\n#").append(event.optInt("number",0))
+                report.append("
+#").append(event.optInt("number",0))
                     .append("  ").append(event.optDouble("latencyMs",-1)>=0?
                         fmt(event.optDouble("latencyMs"))+" мс":"—")
                     .append("  ").append(event.optInt("payloadBytes",0)).append(" Б")
                     .append("  ").append(event.optString("message",""));
             }
         }else if(!rawLog.trim().isEmpty()){
-            report.append("\n").append(rawLog);
+            report.append("
+").append(rawLog);
         }else{
-            report.append("\nСобытия этого сеанса не сохранены.");
+            report.append("
+События этого сеанса не сохранены.");
         }
         String out=report.toString();
         Dialog dialog=new Dialog(this);
@@ -887,7 +903,8 @@ public final class MainActivity extends Activity {
             rows.addView(Ui.text(this,"События этого сеанса не сохранены.",12,Ui.muted(),false));
         }else{
             rows.addView(Ui.text(this,"ТЕКСТОВЫЙ ЖУРНАЛ РАННЕЙ ВЕРСИИ",11,Ui.muted(),true));
-            for(String line:rawLog.split("\\r?\\n")){
+            for(String line:rawLog.split("\\r?\
+")){
                 if(line.trim().isEmpty())continue;
                 TextView entry=Ui.mono(this,line,11,Ui.fg());
                 entry.setTextIsSelectable(true);
