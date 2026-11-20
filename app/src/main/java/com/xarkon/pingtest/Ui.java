@@ -57,18 +57,25 @@ public final class Ui {
     public static TextView button(Context c,String text,boolean filled){
         TextView b=text(c,text,15,filled?onAccent(c):fg(),true);
         b.setGravity(Gravity.CENTER);b.setPadding(dp(14),dp(10),dp(14),dp(10));
+        // Keep controls visually compact without reducing the touch target.
+        b.setMinimumHeight(dp(48));
         b.setBackground(shape(filled?AppPrefs.accent(c):surface2(c),dp(12),filled?0:border()));
         b.setClickable(true);b.setFocusable(true);motion(c,b);return b;
     }
     public static TextView chip(Context c,String value,boolean selected){
         TextView t=text(c,value,13,selected?onAccent(c):muted(),selected);
         t.setGravity(Gravity.CENTER);t.setPadding(dp(10),dp(7),dp(10),dp(7));
+        t.setMinimumHeight(dp(48));
         t.setBackground(shape(selected?AppPrefs.accent(c):surface2(c),dp(10),selected?0:border()));
-        t.setClickable(true);motion(c,t);return t;
+        t.setClickable(true);t.setFocusable(true);t.setSelected(selected);motion(c,t);return t;
     }
     public static void motion(Context c, View view){
         view.setOnTouchListener((v,event)->{
-            if(!AppPrefs.bool(c,"motion",true))return false;
+            // Respect the in-app preference and Android's reduced-motion option.
+            if(!AppPrefs.bool(c,"motion",true)||!android.animation.ValueAnimator.areAnimatorsEnabled()){
+                v.animate().cancel();v.setScaleX(1f);v.setScaleY(1f);
+                return false;
+            }
             if(event.getAction()==android.view.MotionEvent.ACTION_DOWN){
                 v.animate().cancel();v.animate().scaleX(.98f).scaleY(.98f).setDuration(65).start();
             }else if(event.getAction()==android.view.MotionEvent.ACTION_UP||event.getAction()==android.view.MotionEvent.ACTION_CANCEL){

@@ -63,7 +63,7 @@ public final class QrSettingsCards {
         head.addView(titles,new LinearLayout.LayoutParams(0,-2,1));
         UiIcon chevron=symbol(a,"chevron",22,Ui.muted());
         head.addView(chevron,new LinearLayout.LayoutParams(Ui.dp(22),Ui.dp(22)));
-        head.setBackground(ripple(a,0x00000000,0,22));head.setClickable(true);
+        head.setBackground(ripple(a,0x00000000,0,22));head.setClickable(true);head.setFocusable(true);
         shell.addView(head);
         View divider=new View(a);divider.setBackgroundColor(Ui.border());
         LinearLayout.LayoutParams line=new LinearLayout.LayoutParams(-1,Ui.dp(1));
@@ -79,17 +79,19 @@ public final class QrSettingsCards {
         chevron.setRotation(opened[0]?180:0);
         final int[] revision={0};
         final ValueAnimator[] animation={null};
+        head.setSelected(opened[0]);
         head.setContentDescription(title+". "+(opened[0]?"Свернуть":"Развернуть"));
         head.setOnClickListener(v->{
             feedback(a,v);
             boolean opening=!opened[0];opened[0]=opening;
             if(opening)expanded.add(key);else expanded.remove(key);
+            head.setSelected(opening);
             head.setContentDescription(title+". "+(opening?"Свернуть":"Развернуть"));
             if(opening&&!filled[0]){builder.accept(body);filled[0]=true;}
             final int id=++revision[0];
             if(animation[0]!=null){animation[0].cancel();animation[0]=null;}
             chevron.animate().cancel();
-            if(!AppPrefs.bool(a,"motion",true)){
+            if(!AppPrefs.bool(a,"motion",true)||!ValueAnimator.areAnimatorsEnabled()){
                 LinearLayout.LayoutParams lp=(LinearLayout.LayoutParams)body.getLayoutParams();
                 lp.height=ViewGroup.LayoutParams.WRAP_CONTENT;body.setLayoutParams(lp);
                 body.setVisibility(opening?View.VISIBLE:View.GONE);
@@ -163,6 +165,7 @@ public final class QrSettingsCards {
             TextView name=text(a,names[i],12,selected?AppPrefs.accent(a):Ui.fg(),selected);name.setGravity(Gravity.CENTER);tile.addView(name);
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
             lp.setMargins(Ui.dp(3),0,Ui.dp(3),0);themes.addView(tile,lp);
+            tile.setFocusable(true);tile.setSelected(selected);
             tile.setContentDescription("Тема: "+names[i]+(selected?", выбрана":""));
             tile.setOnClickListener(v->{feedback(a,v);
                 if(!id.equals(AppPrefs.mode(a))){AppPrefs.setMode(a,id);refresh.run();}
@@ -196,6 +199,7 @@ public final class QrSettingsCards {
                 tile.addView(caption,new LinearLayout.LayoutParams(-1,-2));
                 LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,Ui.dp(79),1);
                 lp.setMargins(Ui.dp(3),0,Ui.dp(3),0);line.addView(tile,lp);
+                tile.setFocusable(true);tile.setSelected(selected);
                 tile.setContentDescription("Акцент: "+NAMES[n]+(selected?", выбран":""));
                 tile.setOnClickListener(v->{feedback(a,v);if(AppPrefs.accent(a)!=ACCENTS[at]){
                     AppPrefs.put(a,"accent",ACCENTS[at]);refresh.run();
