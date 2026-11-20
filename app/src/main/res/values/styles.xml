@@ -12,6 +12,7 @@
         <item name="android:alertDialogTheme">@style/Theme.PingTest.Dialog</item>
     </style>
     <style name="Theme.PingTest.Dialog" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:colorControlHighlight">#3355DFCB</item>
         <item name="android:windowBackground">#101215</item>
         <item name="android:colorAccent">#55DFCB</item>
         <item name="android:textColorPrimary">#F5F7F9</item>
