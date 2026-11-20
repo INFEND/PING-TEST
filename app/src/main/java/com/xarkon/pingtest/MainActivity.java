@@ -645,8 +645,7 @@ public final class MainActivity extends Activity {
         actions.addView(copy,new LinearLayout.LayoutParams(0,Ui.dp(44),1));
         LinearLayout.LayoutParams after=new LinearLayout.LayoutParams(0,Ui.dp(44),1);after.leftMargin=Ui.dp(8);
         actions.addView(close,after);frame.addView(actions);
-        copy.setOnClickListener(v->copy(String.join("
-",PingService.snapshot().log)));
+        copy.setOnClickListener(v->copy(String.join("\n",PingService.snapshot().log)));
         close.setOnClickListener(v->dialog.dismiss());
         dialog.setOnDismissListener(d->{handler.removeCallbacks(journalTick);
             stopJournalScrollAnimation();
@@ -825,36 +824,26 @@ public final class MainActivity extends Activity {
         String routeLabel=routeLabelFromInfo(route);
         org.json.JSONArray savedEvents=obj.optJSONArray("events");
         boolean structured=savedEvents!=null&&savedEvents.length()>0;
-        StringBuilder report=new StringBuilder(label).append("
-").append(date(obj.optLong("time")))
-            .append("
-Маршрут: ").append(routeLabel).append("
-Отправлено: ").append(sent)
-            .append("
-Ответов: ").append(ok).append("
-")
+        StringBuilder report=new StringBuilder(label).append("\n").append(date(obj.optLong("time")))
+            .append("\nМаршрут: ").append(routeLabel).append("\nОтправлено: ").append(sent)
+            .append("\nОтветов: ").append(ok).append("\n")
             .append(method.startsWith("TCP")?"Сбоев: ":"Потерь: ").append(lost)
-            .append("
-Пропущено: ").append(obj.optInt("skipped"));
+            .append("\nПропущено: ").append(obj.optInt("skipped"));
         if(structured){
-            report.append("
-Сохранённые события:");
+            report.append("\nСохранённые события:");
             for(int i=0;i<savedEvents.length();i++){
                 JSONObject event=savedEvents.optJSONObject(i);
                 if(event==null)continue;
-                report.append("
-#").append(event.optInt("number",0))
+                report.append("\n#").append(event.optInt("number",0))
                     .append("  ").append(event.optDouble("latencyMs",-1)>=0?
                         fmt(event.optDouble("latencyMs"))+" мс":"—")
                     .append("  ").append(event.optInt("payloadBytes",0)).append(" Б")
                     .append("  ").append(event.optString("message",""));
             }
         }else if(!rawLog.trim().isEmpty()){
-            report.append("
-").append(rawLog);
+            report.append("\n").append(rawLog);
         }else{
-            report.append("
-События этого сеанса не сохранены.");
+            report.append("\nСобытия этого сеанса не сохранены.");
         }
         String out=report.toString();
         Dialog dialog=new Dialog(this);
@@ -903,8 +892,7 @@ public final class MainActivity extends Activity {
             rows.addView(Ui.text(this,"События этого сеанса не сохранены.",12,Ui.muted(),false));
         }else{
             rows.addView(Ui.text(this,"ТЕКСТОВЫЙ ЖУРНАЛ РАННЕЙ ВЕРСИИ",11,Ui.muted(),true));
-            for(String line:rawLog.split("\\r?\
-")){
+            for(String line:rawLog.split("\\r?\\n")){
                 if(line.trim().isEmpty())continue;
                 TextView entry=Ui.mono(this,line,11,Ui.fg());
                 entry.setTextIsSelectable(true);
