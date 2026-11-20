@@ -167,6 +167,13 @@ public final class MainActivity extends Activity {
             TextView label=Ui.text(this,names[i],11,selected?Ui.fg():Ui.muted(),selected);
             label.setGravity(Gravity.CENTER);cell.addView(label);
             if(selected)cell.setBackground(Ui.shape(Ui.surface2(this),Ui.dp(13),0));
+            // Expose one named, selected tab to accessibility services; decorative icon/text stay inside it.
+            cell.setFocusable(true);
+            cell.setContentDescription(names[i]);
+            cell.setSelected(selected);
+            cell.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+            glyph.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             nav.addView(cell,new LinearLayout.LayoutParams(0,Ui.dp(51),1));
             cell.setOnClickListener(v->{if(index!=tab)showTab(index);});
         }
