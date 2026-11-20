@@ -118,12 +118,7 @@ public final class MainActivity extends Activity {
             View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0);
         tab=next;host=null;go=null;last=null;avg=null;failed=null;graph=null;qualityState=null;recentEvents=null;
         root=Ui.vertical(this);root.setBackgroundColor(Ui.bg(this));
-        root.setOnApplyWindowInsetsListener((v,insets)->{
-            int top,bottom;if(Build.VERSION.SDK_INT>=30){android.graphics.Insets st=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());top=st.top;bottom=st.bottom;}
-            else{top=insets.getSystemWindowInsetTop();bottom=insets.getSystemWindowInsetBottom();}
-            if(v.getPaddingTop()!=top||v.getPaddingBottom()!=bottom)v.setPadding(0,top,0,bottom);
-            return insets;
-        });
+        UiInsets.apply(this,root);
         setContentView(root);root.requestApplyInsets();
         header();
         scroller=new ScrollView(this);scroller.setClipToPadding(false);scroller.setFillViewport(false);

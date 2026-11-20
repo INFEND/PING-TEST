@@ -6,7 +6,9 @@ SOURCE = (Path(__file__).resolve().parents[1] / "app/src/main/java/com/xarkon/pi
 class GraphAxisLabelTests(unittest.TestCase):
     def test_axis_labels_avoid_per_frame_formatter(self):
         self.assertNotIn("String.format(", SOURCE)
-        self.assertIn("Long.toString(Math.round((double)(max*(3-k)/3)))", SOURCE)
+        self.assertIn("float tick=max*(3-k)/3f;", SOURCE)
+        self.assertIn("Float.toString(Math.round(tick*10f)/10f)", SOURCE)
+        self.assertIn("Long.toString(Math.round((double)tick))", SOURCE)
 
     def test_bounded_and_loss_markers_remain_distinct(self):
         self.assertLess(SOURCE.index("if(v[i]==-2f)"), SOURCE.index("if(v[i]<0)"))
