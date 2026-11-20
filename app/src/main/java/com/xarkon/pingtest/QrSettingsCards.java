@@ -61,9 +61,12 @@ public final class QrSettingsCards {
         titles.addView(text(a,title,17,Ui.fg(),true));spacer(titles,5);
         titles.addView(text(a,detail,12,Ui.muted(),false));
         head.addView(titles,new LinearLayout.LayoutParams(0,-2,1));
+        titles.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         UiIcon chevron=symbol(a,"chevron",22,Ui.muted());
         head.addView(chevron,new LinearLayout.LayoutParams(Ui.dp(22),Ui.dp(22)));
+        chevron.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         head.setBackground(ripple(a,0x00000000,0,22));head.setClickable(true);head.setFocusable(true);
+        head.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
         shell.addView(head);
         View divider=new View(a);divider.setBackgroundColor(Ui.border());
         LinearLayout.LayoutParams line=new LinearLayout.LayoutParams(-1,Ui.dp(1));
@@ -80,14 +83,14 @@ public final class QrSettingsCards {
         final int[] revision={0};
         final ValueAnimator[] animation={null};
         head.setSelected(opened[0]);
-        head.setContentDescription(title+". "+(opened[0]?"Свернуть":"Развернуть"));
+        head.setContentDescription(title+". "+detail+". "+(opened[0]?"Свернуть":"Развернуть"));
         if(Build.VERSION.SDK_INT>=30)head.setStateDescription(opened[0]?"Развёрнуто":"Свёрнуто");
         head.setOnClickListener(v->{
             feedback(a,v);
             boolean opening=!opened[0];opened[0]=opening;
             if(opening)expanded.add(key);else expanded.remove(key);
             head.setSelected(opening);
-            head.setContentDescription(title+". "+(opening?"Свернуть":"Развернуть"));
+            head.setContentDescription(title+". "+detail+". "+(opening?"Свернуть":"Развернуть"));
             if(Build.VERSION.SDK_INT>=30)head.setStateDescription(opening?"Развёрнуто":"Свёрнуто");
             if(opening&&!filled[0]){builder.accept(body);filled[0]=true;}
             final int id=++revision[0];
