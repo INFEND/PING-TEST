@@ -67,7 +67,9 @@ public final class Ui {
         t.setGravity(Gravity.CENTER);t.setPadding(dp(10),dp(7),dp(10),dp(7));
         t.setMinimumHeight(dp(48));
         t.setBackground(shape(selected?AppPrefs.accent(c):surface2(c),dp(10),selected?0:border()));
-        t.setClickable(true);t.setFocusable(true);t.setSelected(selected);motion(c,t);return t;
+        t.setClickable(true);t.setFocusable(true);t.setSelected(selected);
+        t.setContentDescription(value+(selected?", выбран":""));
+        motion(c,t);return t;
     }
     public static void motion(Context c, View view){
         view.setOnTouchListener((v,event)->{
