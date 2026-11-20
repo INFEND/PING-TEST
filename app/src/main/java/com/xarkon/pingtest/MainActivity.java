@@ -791,7 +791,7 @@ public final class MainActivity extends Activity {
             badges.addView(routeBadge,badgeGap);
             card.addView(badges,Ui.margins(-1,-2,0,5));
             card.addView(Ui.text(this,date(o.optLong("time"))+"   ·   "+o.optInt("ok")+" / "+sent,11,Ui.muted(),false));
-            card.setOnClickListener(v->historyDetails(o));card.setOnLongClickListener(v->{new AlertDialog.Builder(this).setTitle("Удалить сеанс?")
+            // One accessible summary for the entire tappable history entry.\n            card.setContentDescription(o.optString("label",TargetStore.friendly(this,o.optString("host","—")))\n                + ", " + m.getText() + ", " + lossLabel.getText() + ", " + routeLabel\n                + ", " + date(o.optLong("time")) + ", " + ok + " из " + sent + " ответов");\n            card.setFocusable(true);\n            card.setOnClickListener(v->historyDetails(o));card.setOnLongClickListener(v->{new AlertDialog.Builder(this).setTitle("Удалить сеанс?")
                 .setNegativeButton("Отмена",null).setPositiveButton("Удалить",(d,w)->{if(HistoryStore.removeEntry(this,historyIndex,o))showTab(1);
                      else toast("Запись изменилась. Обновите историю.");}).show();return true;});
             page.addView(card,Ui.margins(-1,-2,0,9));
