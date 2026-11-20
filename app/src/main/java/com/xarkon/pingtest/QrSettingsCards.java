@@ -81,12 +81,14 @@ public final class QrSettingsCards {
         final ValueAnimator[] animation={null};
         head.setSelected(opened[0]);
         head.setContentDescription(title+". "+(opened[0]?"Свернуть":"Развернуть"));
+        if(Build.VERSION.SDK_INT>=30)head.setStateDescription(opened[0]?"Развёрнуто":"Свёрнуто");
         head.setOnClickListener(v->{
             feedback(a,v);
             boolean opening=!opened[0];opened[0]=opening;
             if(opening)expanded.add(key);else expanded.remove(key);
             head.setSelected(opening);
             head.setContentDescription(title+". "+(opening?"Свернуть":"Развернуть"));
+            if(Build.VERSION.SDK_INT>=30)head.setStateDescription(opening?"Развёрнуто":"Свёрнуто");
             if(opening&&!filled[0]){builder.accept(body);filled[0]=true;}
             final int id=++revision[0];
             if(animation[0]!=null){animation[0].cancel();animation[0]=null;}
