@@ -655,12 +655,22 @@ public final class MainActivity extends Activity {
         scroll.setBackground(Ui.shape(Ui.bg(this),Ui.dp(11),Ui.border()));
         frame.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
         addSpace(frame,12);
-        LinearLayout actions=Ui.horizontal(this);
+        // Keep long Russian action labels legible on narrow screens and with large fonts.
+        boolean stackJournalActions=getResources().getConfiguration().screenWidthDp<360
+            || getResources().getConfiguration().fontScale>1.25f;
+        LinearLayout actions=stackJournalActions?Ui.vertical(this):Ui.horizontal(this);
         TextView copy=Ui.button(this,"КОПИРОВАТЬ",false);
         TextView close=Ui.button(this,"ЗАКРЫТЬ",true);
-        actions.addView(copy,new LinearLayout.LayoutParams(0,Ui.dp(44),1));
-        LinearLayout.LayoutParams after=new LinearLayout.LayoutParams(0,Ui.dp(44),1);after.leftMargin=Ui.dp(8);
-        actions.addView(close,after);frame.addView(actions);
+        if(stackJournalActions){
+            actions.addView(copy,new LinearLayout.LayoutParams(-1,Ui.dp(48)));
+            actions.addView(close,Ui.margins(-1,48,8,0));
+        }else{
+            actions.addView(copy,new LinearLayout.LayoutParams(0,Ui.dp(44),1));
+            LinearLayout.LayoutParams after=new LinearLayout.LayoutParams(0,Ui.dp(44),1);
+            after.leftMargin=Ui.dp(8);
+            actions.addView(close,after);
+        }
+        frame.addView(actions);
         copy.setOnClickListener(v->copy(String.join("\n",PingService.snapshot().log)));
         close.setOnClickListener(v->dialog.dismiss());
         dialog.setOnDismissListener(d->{handler.removeCallbacks(journalTick);
