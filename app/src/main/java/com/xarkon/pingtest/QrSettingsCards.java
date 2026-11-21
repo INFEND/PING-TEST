@@ -257,9 +257,22 @@ public final class QrSettingsCards {
         LinearLayout button=Ui.horizontal(a);button.setGravity(Gravity.CENTER);
         button.setPadding(Ui.dp(17),Ui.dp(15),Ui.dp(17),Ui.dp(15));
         int accent=AppPrefs.accent(a);button.setBackground(ripple(a,Ui.surface2(a),Ui.border(),16));
-        button.addView(symbol(a,"check",24,accent),new LinearLayout.LayoutParams(Ui.dp(24),Ui.dp(24)));
+        UiIcon buttonGlyph=symbol(a,"check",24,accent);
+        buttonGlyph.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        button.addView(buttonGlyph,new LinearLayout.LayoutParams(Ui.dp(24),Ui.dp(24)));
         TextView title=text(a,"  ПРОВЕРИТЬ ОБНОВЛЕНИЕ",14,Ui.fg(),true);button.addView(title);
-        p.addView(button,margin(12));button.setOnClickListener(v->{feedback(a,v);check.run();});Ui.motion(a,button);
+        p.addView(button,margin(12));
+        button.setFocusable(true);
+        button.setContentDescription("Проверить обновление");
+        button.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+        title.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        button.setAccessibilityDelegate(new View.AccessibilityDelegate(){
+            @Override public void onInitializeAccessibilityNodeInfo(View host,android.view.accessibility.AccessibilityNodeInfo info){
+                super.onInitializeAccessibilityNodeInfo(host,info);
+                info.setClassName(android.widget.Button.class.getName());
+            }
+        });
+        button.setOnClickListener(v->{feedback(a,v);check.run();});Ui.motion(a,button);
         SharedPreferences prefs=AppPrefs.of(a);
         toggle(a,p,"check","Проверка обновлений при запуске","При открытии PING TEST",
             prefs.getBoolean(OtaUpdateSchedule.PREF_ON_LAUNCH,true),
