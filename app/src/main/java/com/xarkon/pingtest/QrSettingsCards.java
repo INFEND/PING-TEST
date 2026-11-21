@@ -177,7 +177,7 @@ public final class QrSettingsCards {
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
             lp.setMargins(Ui.dp(3),0,Ui.dp(3),0);themes.addView(tile,lp);
             tile.setFocusable(true);tile.setSelected(selected);tile.setClickable(true);
-            tile.setContentDescription("Тема: "+names[i]);
+            tile.setContentDescription("Тема: "+names[i]+(Build.VERSION.SDK_INT<30?(selected?", выбрана":", не выбрана"):""));
             if(Build.VERSION.SDK_INT>=30)tile.setStateDescription(selected?"Выбрана":"Не выбрана");
             tile.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
             for(int child=0;child<tile.getChildCount();child++)
@@ -221,7 +221,7 @@ public final class QrSettingsCards {
                 LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,Ui.dp(79),1);
                 lp.setMargins(Ui.dp(3),0,Ui.dp(3),0);line.addView(tile,lp);
                 tile.setFocusable(true);tile.setSelected(selected);tile.setClickable(true);
-                tile.setContentDescription("Акцент: "+NAMES[n]);
+                tile.setContentDescription("Акцент: "+NAMES[n]+(Build.VERSION.SDK_INT<30?(selected?", выбран":", не выбран"):""));
                 if(Build.VERSION.SDK_INT>=30)tile.setStateDescription(selected?"Выбран":"Не выбран");
                 tile.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
                 for(int child=0;child<tile.getChildCount();child++)
