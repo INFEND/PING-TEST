@@ -345,7 +345,9 @@ public final class QrSettingsCards {
     }
     private static void info(Activity a,LinearLayout p,String glyph,String title,String detail,boolean small){
         LinearLayout row=Ui.horizontal(a);row.setGravity(Gravity.CENTER_VERTICAL);
-        row.addView(symbol(a,glyph,25,AppPrefs.accent(a)),new LinearLayout.LayoutParams(Ui.dp(26),Ui.dp(26)));
+        UiIcon decorativeGlyph=symbol(a,glyph,25,AppPrefs.accent(a));
+        decorativeGlyph.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        row.addView(decorativeGlyph,new LinearLayout.LayoutParams(Ui.dp(26),Ui.dp(26)));
         LinearLayout labels=Ui.vertical(a);labels.setPadding(Ui.dp(12),0,0,0);
         labels.addView(text(a,title,small?12:13,Ui.fg(),true));spacer(labels,4);
         labels.addView(text(a,detail,12,Ui.muted(),false));
