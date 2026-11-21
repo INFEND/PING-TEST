@@ -56,7 +56,9 @@ public final class QrSettingsCards {
         LinearLayout.LayoutParams card=margin(13);parent.addView(shell,card);
         LinearLayout head=Ui.horizontal(a);head.setMinimumHeight(Ui.dp(82));
         head.setPadding(Ui.dp(16),Ui.dp(15),Ui.dp(15),Ui.dp(15));
-        head.addView(symbol(a,glyph,29,AppPrefs.accent(a)),new LinearLayout.LayoutParams(Ui.dp(29),Ui.dp(29)));
+        UiIcon sectionGlyph=symbol(a,glyph,29,AppPrefs.accent(a));
+        sectionGlyph.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        head.addView(sectionGlyph,new LinearLayout.LayoutParams(Ui.dp(29),Ui.dp(29)));
         LinearLayout titles=Ui.vertical(a);titles.setPadding(Ui.dp(13),0,Ui.dp(8),0);
         titles.addView(text(a,title,17,Ui.fg(),true));spacer(titles,5);
         titles.addView(text(a,detail,12,Ui.muted(),false));
