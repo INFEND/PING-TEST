@@ -176,8 +176,18 @@ public final class QrSettingsCards {
             TextView name=text(a,names[i],12,selected?AppPrefs.accent(a):Ui.fg(),selected);name.setGravity(Gravity.CENTER);tile.addView(name);
             LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
             lp.setMargins(Ui.dp(3),0,Ui.dp(3),0);themes.addView(tile,lp);
-            tile.setFocusable(true);tile.setSelected(selected);
-            tile.setContentDescription("Тема: "+names[i]+(selected?", выбрана":""));
+            tile.setFocusable(true);tile.setSelected(selected);tile.setClickable(true);
+            tile.setContentDescription("Тема: "+names[i]);
+            if(Build.VERSION.SDK_INT>=30)tile.setStateDescription(selected?"Выбрана":"Не выбрана");
+            tile.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+            for(int child=0;child<tile.getChildCount();child++)
+                tile.getChildAt(child).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            tile.setAccessibilityDelegate(new View.AccessibilityDelegate(){
+                @Override public void onInitializeAccessibilityNodeInfo(View host,android.view.accessibility.AccessibilityNodeInfo info){
+                    super.onInitializeAccessibilityNodeInfo(host,info);
+                    info.setClassName(android.widget.Button.class.getName());
+                }
+            });
             tile.setOnClickListener(v->{feedback(a,v);
                 if(!id.equals(AppPrefs.mode(a))){AppPrefs.setMode(a,id);refresh.run();}
             });Ui.motion(a,tile);
@@ -210,8 +220,18 @@ public final class QrSettingsCards {
                 tile.addView(caption,new LinearLayout.LayoutParams(-1,-2));
                 LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,Ui.dp(79),1);
                 lp.setMargins(Ui.dp(3),0,Ui.dp(3),0);line.addView(tile,lp);
-                tile.setFocusable(true);tile.setSelected(selected);
-                tile.setContentDescription("Акцент: "+NAMES[n]+(selected?", выбран":""));
+                tile.setFocusable(true);tile.setSelected(selected);tile.setClickable(true);
+                tile.setContentDescription("Акцент: "+NAMES[n]);
+                if(Build.VERSION.SDK_INT>=30)tile.setStateDescription(selected?"Выбран":"Не выбран");
+                tile.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+                for(int child=0;child<tile.getChildCount();child++)
+                    tile.getChildAt(child).setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+                tile.setAccessibilityDelegate(new View.AccessibilityDelegate(){
+                    @Override public void onInitializeAccessibilityNodeInfo(View host,android.view.accessibility.AccessibilityNodeInfo info){
+                        super.onInitializeAccessibilityNodeInfo(host,info);
+                        info.setClassName(android.widget.Button.class.getName());
+                    }
+                });
                 tile.setOnClickListener(v->{feedback(a,v);if(AppPrefs.accent(a)!=ACCENTS[at]){
                     AppPrefs.put(a,"accent",ACCENTS[at]);refresh.run();
                 }});Ui.motion(a,tile);
