@@ -69,6 +69,14 @@ public final class QrSettingsCards {
         chevron.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         head.setBackground(ripple(a,0x00000000,0,22));head.setClickable(true);head.setFocusable(true);
         head.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
+        // Expose the collapsible header as a button, not an anonymous layout.
+        head.setAccessibilityDelegate(new View.AccessibilityDelegate(){
+            @Override public void onInitializeAccessibilityNodeInfo(View host,
+                    android.view.accessibility.AccessibilityNodeInfo info){
+                super.onInitializeAccessibilityNodeInfo(host,info);
+                info.setClassName(android.widget.Button.class.getName());
+            }
+        });
         shell.addView(head);
         View divider=new View(a);divider.setBackgroundColor(Ui.border());
         LinearLayout.LayoutParams line=new LinearLayout.LayoutParams(-1,Ui.dp(1));
