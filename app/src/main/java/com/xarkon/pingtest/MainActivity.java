@@ -407,11 +407,20 @@ public final class MainActivity extends Activity {
         note.setPadding(0,Ui.dp(10),0,Ui.dp(11));body.addView(note);
         TextView close=Ui.button(this,"ЗАКРЫТЬ",false);body.addView(close);
         close.setOnClickListener(v->dialog.dismiss());
-        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(false);scroll.addView(body);
+        // Let short target lists use their natural height while long lists remain scrollable.
+        ScrollView scroll=new ScrollView(this){
+            @Override protected void onMeasure(int widthMeasureSpec,int heightMeasureSpec){
+                int maxHeight=(int)(getResources().getDisplayMetrics().heightPixels*.83f);
+                super.onMeasure(widthMeasureSpec,View.MeasureSpec.makeMeasureSpec(
+                        Math.min(maxHeight,View.MeasureSpec.getSize(heightMeasureSpec)),
+                        View.MeasureSpec.AT_MOST));
+            }
+        };
+        scroll.setFillViewport(false);scroll.addView(body);
         dialog.setContentView(scroll);dialog.show();Window window=dialog.getWindow();
         if(window!=null){window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             window.setLayout(getResources().getDisplayMetrics().widthPixels-Ui.dp(24),
-                (int)(getResources().getDisplayMetrics().heightPixels*.83f));}
+                WindowManager.LayoutParams.WRAP_CONTENT);}
     }
     private ImageView icon(int resource,int tint,int paddingSize){
         ImageView image=new ImageView(this);image.setImageResource(resource);
