@@ -80,6 +80,7 @@ public final class QrSettingsCards {
         final boolean[] filled={false};
         if(opened[0]){builder.accept(body);filled[0]=true;}
         body.setVisibility(opened[0]?View.VISIBLE:View.GONE);
+        body.setImportantForAccessibility(opened[0]?View.IMPORTANT_FOR_ACCESSIBILITY_AUTO:View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         divider.setVisibility(opened[0]?View.VISIBLE:View.GONE);
         chevron.setRotation(opened[0]?180:0);
         final int[] revision={0};
@@ -95,6 +96,8 @@ public final class QrSettingsCards {
             head.setContentDescription(title+". "+detail+". "+(opening?"Свернуть":"Развернуть"));
             if(Build.VERSION.SDK_INT>=30)head.setStateDescription(opening?"Развёрнуто":"Свёрнуто");
             if(opening&&!filled[0]){builder.accept(body);filled[0]=true;}
+            // Hide collapsed controls from TalkBack immediately, even during the closing animation.
+            body.setImportantForAccessibility(opening?View.IMPORTANT_FOR_ACCESSIBILITY_AUTO:View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
             final int id=++revision[0];
             if(animation[0]!=null){animation[0].cancel();animation[0]=null;}
             chevron.animate().cancel();
