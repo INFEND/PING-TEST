@@ -7,6 +7,7 @@
         <item name="android:windowLightNavigationBar">false</item>
         <item name="android:windowActionModeOverlay">true</item>
         <item name="android:colorAccent">#55DFCB</item>
+        <item name="android:colorControlActivated">#55DFCB</item>
         <item name="android:colorControlHighlight">#3355DFCB</item>
         <item name="android:windowBackground">#000000</item>
         <item name="android:alertDialogTheme">@style/Theme.PingTest.Dialog</item>
@@ -15,6 +16,7 @@
         <item name="android:colorControlHighlight">#3355DFCB</item>
         <item name="android:windowBackground">#101215</item>
         <item name="android:colorAccent">#55DFCB</item>
+        <item name="android:colorControlActivated">#55DFCB</item>
         <item name="android:textColorPrimary">#F5F7F9</item>
         <item name="android:textColorSecondary">#B9C5CD</item>
     </style>
