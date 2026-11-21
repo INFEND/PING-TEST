@@ -140,12 +140,18 @@ public final class QrSettingsCards {
     private static void toggle(Activity a,LinearLayout body,String icon,String title,String detail,
            boolean current,Consumer<Boolean> action){
         LinearLayout line=Ui.horizontal(a);line.setPadding(Ui.dp(7),Ui.dp(10),Ui.dp(5),Ui.dp(10));
-        line.addView(symbol(a,icon,24,AppPrefs.accent(a)),new LinearLayout.LayoutParams(Ui.dp(24),Ui.dp(24)));
+        UiIcon decoration=symbol(a,icon,24,AppPrefs.accent(a));
+        decoration.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        line.addView(decoration,new LinearLayout.LayoutParams(Ui.dp(24),Ui.dp(24)));
         LinearLayout labels=Ui.vertical(a);labels.setPadding(Ui.dp(12),0,Ui.dp(8),0);
         labels.addView(text(a,title,14,Ui.fg(),true));spacer(labels,5);
         labels.addView(text(a,detail,12,Ui.muted(),false));
+        labels.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         line.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
+        // One meaningful TalkBack stop: the switch announces its purpose and state.
+        line.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         Switch sw=new Switch(a);sw.setChecked(current);
+        sw.setContentDescription(title+". "+detail);
         sw.setThumbTintList(new ColorStateList(
             new int[][]{new int[]{android.R.attr.state_checked},new int[]{}},
             new int[]{AppPrefs.accent(a),Ui.muted()}));
