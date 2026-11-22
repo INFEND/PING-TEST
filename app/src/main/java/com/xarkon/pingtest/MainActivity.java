@@ -458,17 +458,24 @@ public final class MainActivity extends Activity {
         address.setSingleLine(true);address.setTextColor(Ui.fg());address.setHint("Домен или IP");
         address.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);
         if(current!=null){name.setText(current.name);address.setText(current.host);}
+        // Keep both editable fields reachable when the IME reduces dialog height.
+        ScrollView formScroll=new ScrollView(this);
+        formScroll.setFillViewport(false);
+        formScroll.addView(frame);
         frame.addView(Ui.text(this,"НАЗВАНИЕ",11,Ui.muted(),true));frame.addView(name);
         frame.addView(Ui.text(this,"АДРЕС УЗЛА",11,Ui.muted(),true));frame.addView(address);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle(current==null?"Добавить узел":"Изменить узел")
-            .setView(frame).setNegativeButton("ОТМЕНА",null)
+            .setView(formScroll).setNegativeButton("ОТМЕНА",null)
             .setPositiveButton("СОХРАНИТЬ",null).create();
         if(current!=null)dialog.setButton(AlertDialog.BUTTON_NEUTRAL,"УДАЛИТЬ",(d,w)->{
             TargetStore.remove(this,current);if(host!=null)host.setText(TargetStore.selected(this).name);
             if(PingService.snapshot().active)selectTarget(TargetStore.selected(this),true);
             else if(tab==0)refreshPing();
         });
-        dialog.setOnShowListener(d->{dialog.getWindow().setBackgroundDrawable(Ui.shape(Ui.surface(this),Ui.dp(17),Ui.border()));
+        dialog.setOnShowListener(d->{Window window=dialog.getWindow();
+            if(window!=null){window.setBackgroundDrawable(Ui.shape(Ui.surface(this),Ui.dp(17),Ui.border()));
+                window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);}
+
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->{
                 String label=name.getText().toString().trim();String ip=normal(address.getText().toString());
                 if(label.length()<1||label.length()>48){name.setError("Введите название до 48 символов");return;}
