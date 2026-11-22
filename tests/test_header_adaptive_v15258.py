@@ -7,5 +7,5 @@ for name, low, high in [("a",13,19),("b",8,10),("status",8,10)]:
     assert f"{name}.setSingleLine(true)" in h
     assert f"{name}.setAutoSizeTextTypeUniformWithConfiguration({low},{high},1,android.util.TypedValue.COMPLEX_UNIT_SP)" in h
 assert 'status.setText(running?"● РАБОТАЕТ":!s.error.isEmpty()?"● ОШИБКА":"● ГОТОВ")' in s
-assert "versionCode 266" in Path("app/build.gradle").read_text()
+assert int(Path("app/build.gradle").read_text().split("versionCode ",1)[1].split()[0]) >= 266
 print("PASS: adaptive header labels and unchanged status semantics")

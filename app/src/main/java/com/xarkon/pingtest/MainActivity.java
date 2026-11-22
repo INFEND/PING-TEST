@@ -193,6 +193,8 @@ public final class MainActivity extends Activity {
         LinearLayout row=Ui.horizontal(this);row.setGravity(Gravity.CENTER_VERTICAL);
         host=Ui.text(this,TargetStore.selected(this).name,22,Ui.fg(),true);
         host.setSingleLine(true);host.setEllipsize(TextUtils.TruncateAt.END);
+        // Keep long custom target names legible without changing selection or host values.
+        host.setAutoSizeTextTypeUniformWithConfiguration(12,22,1,android.util.TypedValue.COMPLEX_UNIT_SP);
         host.setPadding(0,Ui.dp(11),0,Ui.dp(11));
         row.addView(host,new LinearLayout.LayoutParams(0,-2,1));
         TextView pick=Ui.chip(this,"ИЗМЕНИТЬ  ⌄",false);pick.setTextSize(11);row.addView(pick);
