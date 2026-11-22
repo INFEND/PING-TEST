@@ -255,7 +255,7 @@ public final class MainActivity extends Activity {
         LinearLayout col=Ui.vertical(this);
         int gravity=index==0?Gravity.START:index==1?Gravity.CENTER_HORIZONTAL:Gravity.END;
         col.setGravity(gravity);
-        TextView caption=label(name);caption.setSingleLine(true);caption.setGravity(
+        TextView caption=label(name);caption.setMaxLines(2);caption.setEllipsize(TextUtils.TruncateAt.END);caption.setGravity(
             index==0?Gravity.START:index==1?Gravity.CENTER:Gravity.END);
         col.addView(caption,new LinearLayout.LayoutParams(-1,-2));
         value.setGravity(index==0?Gravity.START:index==1?Gravity.CENTER:Gravity.END);
