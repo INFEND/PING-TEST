@@ -566,6 +566,9 @@ public final class MainActivity extends Activity {
         TextView number=Ui.mono(this,"#"+e.number,12,Ui.muted());
         number.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);
         number.setSingleLine(true);
+        number.setAutoSizeTextTypeUniformWithConfiguration(9,12,1,
+            android.util.TypedValue.COMPLEX_UNIT_SP);
+        number.setContentDescription("#"+e.number);
         row.addView(number,new LinearLayout.LayoutParams(0,-2,1f));
         boolean answered=e.latencyMs>=0||e.latencyMs==-2;
         String middle=e.latencyMs==-2?"<1 мс":answered?String.format(Locale.US,"%.1f мс",e.latencyMs):
@@ -584,6 +587,9 @@ public final class MainActivity extends Activity {
         TextView size=Ui.mono(this,String.valueOf(e.payloadBytes),12,Ui.fg());
         size.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
         size.setSingleLine(true);
+        size.setAutoSizeTextTypeUniformWithConfiguration(9,12,1,
+            android.util.TypedValue.COMPLEX_UNIT_SP);
+        size.setContentDescription(String.valueOf(e.payloadBytes));
         row.addView(size,new LinearLayout.LayoutParams(0,-2,1f));
         return row;
     }
