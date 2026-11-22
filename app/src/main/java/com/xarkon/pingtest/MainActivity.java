@@ -202,6 +202,8 @@ public final class MainActivity extends Activity {
         target.setOnClickListener(v->chooseHost());target.addView(row);
         ip=Ui.text(this,"Готов к проверке",11,Ui.muted(),false);
         ip.setSingleLine(true);ip.setEllipsize(TextUtils.TruncateAt.END);
+        // Scale long status/address text without truncating its underlying value.
+        ip.setAutoSizeTextTypeUniformWithConfiguration(9,11,1,android.util.TypedValue.COMPLEX_UNIT_SP);
         target.addView(ip,Ui.margins(-1,-2,0,9));
         go=Ui.button(this,"НАЧАТЬ ПРОВЕРКУ  ›",true);go.setTextSize(13);
         go.setPadding(Ui.dp(8),Ui.dp(11),Ui.dp(8),Ui.dp(11));target.addView(go);
