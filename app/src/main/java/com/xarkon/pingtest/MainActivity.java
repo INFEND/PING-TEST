@@ -207,7 +207,8 @@ public final class MainActivity extends Activity {
         qualityState=Ui.text(this,"ОЖИДАНИЕ",10,QualityColors.UNKNOWN,true);
         qualityState.setLetterSpacing(.08f);heading.addView(qualityState);display.addView(heading);
         LinearLayout big=Ui.horizontal(this);
-        last=new Metric("—",44,QualityColors.UNKNOWN,0);big.addView(last,new LinearLayout.LayoutParams(0,Ui.dp(64),1));
+        last=new Metric("—",44,QualityColors.UNKNOWN,0);big.addView(last,new LinearLayout.LayoutParams(0,-2,1));
+        last.setMinimumHeight(Ui.dp(64));
         unit=Ui.text(this,"мс",13,Ui.muted(),false);big.addView(unit);
         display.addView(big);
         View rule=Ui.divider(this);display.addView(rule,Ui.margins(-1,1,0,10));
@@ -260,7 +261,8 @@ public final class MainActivity extends Activity {
         value.setGravity(index==0?Gravity.START:index==1?Gravity.CENTER:Gravity.END);
         value.setFontFeatureSettings("tnum");
         value.setSingleLine(true);
-        col.addView(value,Ui.margins(-1,29,0,0));
+        value.setMinHeight(Ui.dp(29));
+        col.addView(value,Ui.margins(-1,-2,0,0));
         parent.addView(col,new LinearLayout.LayoutParams(0,-2,1));
     }
     /** Three aligned metric cells: labels remain legible in dark, AMOLED and light themes. */
