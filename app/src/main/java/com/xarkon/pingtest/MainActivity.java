@@ -575,7 +575,10 @@ public final class MainActivity extends Activity {
             e.message.toLowerCase(Locale.ROOT).contains("пропуск")?QualityColors.YELLOW:QualityColors.RED,true);
         response.setGravity(Gravity.CENTER);
         response.setSingleLine(true);
-        response.setEllipsize(TextUtils.TruncateAt.END);
+        // Prefer a smaller complete reading to truncating a measured RTT on narrow screens.
+        response.setAutoSizeTextTypeUniformWithConfiguration(9,answered?13:11,1,
+            android.util.TypedValue.COMPLEX_UNIT_SP);
+        response.setContentDescription(middle);
         response.setFontFeatureSettings("tnum");
         row.addView(response,new LinearLayout.LayoutParams(0,-2,1.65f));
         TextView size=Ui.mono(this,String.valueOf(e.payloadBytes),12,Ui.fg());
