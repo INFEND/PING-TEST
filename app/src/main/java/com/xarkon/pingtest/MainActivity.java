@@ -174,7 +174,9 @@ public final class MainActivity extends Activity {
             cell.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_YES);
             glyph.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             label.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            nav.addView(cell,new LinearLayout.LayoutParams(0,Ui.dp(51),1));
+            // Keep the touch target at least 51dp while allowing scaled labels to grow vertically.
+            cell.setMinimumHeight(Ui.dp(51));
+            nav.addView(cell,new LinearLayout.LayoutParams(0,-2,1));
             cell.setOnClickListener(v->{if(index!=tab)showTab(index);});
         }
         root.addView(nav);
