@@ -236,7 +236,9 @@ public final class MainActivity extends Activity {
         LinearLayout chartCard=Ui.panel(this);chartCard.setPadding(Ui.dp(13),Ui.dp(11),Ui.dp(13),Ui.dp(11));
         LinearLayout graphHead=Ui.horizontal(this);graphHead.addView(label("ГРАФИК ЗАДЕРЖКИ"),new LinearLayout.LayoutParams(0,-2,1));
         graphHead.addView(Ui.text(this,AppPrefs.number(this,"graph_points",150)+" ПАКЕТОВ",10,Ui.muted(),false));chartCard.addView(graphHead);
-        TextView legend=Ui.text(this,"● Отлично       ● Норма       ● Плохо",10,Ui.muted(),false);
+        TextView legend=Ui.text(this,"● Отлично   ● Норма   ● Плохо",10,Ui.muted(),false);
+        legend.setMaxLines(2);legend.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_HIGH_QUALITY);
+        legend.setContentDescription("Качество задержки: отлично, норма, плохо");
         SpannableStringBuilder legendSpan=new SpannableStringBuilder(legend.getText());
         legendSpan.setSpan(new ForegroundColorSpan(QualityColors.GREEN),0,1,Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         // Use the actual positions instead of fixed character offsets for localization safety.
