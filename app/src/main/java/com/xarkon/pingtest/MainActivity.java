@@ -234,8 +234,15 @@ public final class MainActivity extends Activity {
         display.addView(detail);
         page.addView(display,Ui.margins(-1,-2,0,11));
         LinearLayout chartCard=Ui.panel(this);chartCard.setPadding(Ui.dp(13),Ui.dp(11),Ui.dp(13),Ui.dp(11));
-        LinearLayout graphHead=Ui.horizontal(this);graphHead.addView(label("ГРАФИК ЗАДЕРЖКИ"),new LinearLayout.LayoutParams(0,-2,1));
-        graphHead.addView(Ui.text(this,AppPrefs.number(this,"graph_points",150)+" ПАКЕТОВ",10,Ui.muted(),false));chartCard.addView(graphHead);
+        LinearLayout graphHead=Ui.horizontal(this);
+        TextView graphTitle=label("ГРАФИК ЗАДЕРЖКИ");
+        graphTitle.setSingleLine(true);
+        graphTitle.setAutoSizeTextTypeUniformWithConfiguration(9,12,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+        graphHead.addView(graphTitle,new LinearLayout.LayoutParams(0,-2,1));
+        TextView graphCount=Ui.text(this,AppPrefs.number(this,"graph_points",150)+" ПАКЕТОВ",10,Ui.muted(),false);
+        graphCount.setSingleLine(true);
+        graphCount.setAutoSizeTextTypeUniformWithConfiguration(9,10,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+        graphHead.addView(graphCount);chartCard.addView(graphHead);
         TextView legend=Ui.text(this,"● Отлично   ● Норма   ● Плохо",10,Ui.muted(),false);
         legend.setMaxLines(2);legend.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_HIGH_QUALITY);
         legend.setContentDescription("Качество задержки: отлично, норма, плохо");
