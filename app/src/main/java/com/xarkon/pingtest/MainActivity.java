@@ -141,10 +141,14 @@ public final class MainActivity extends Activity {
         mark.setBackground(Ui.shape(Ui.surface2(this),Ui.dp(12),0));
         l.addView(mark,new LinearLayout.LayoutParams(Ui.dp(35),Ui.dp(35)));
         LinearLayout title=Ui.vertical(this);title.setPadding(Ui.dp(8),0,0,0);
-        TextView a=Ui.text(this,"PING TEST",19,Ui.fg(),true);a.setLetterSpacing(.045f);title.addView(a);
-        TextView b=Ui.text(this,"СЕТЕВОЙ МОНИТОР",10,Ui.muted(),false);b.setLetterSpacing(.13f);title.addView(b);
+        TextView a=Ui.text(this,"PING TEST",19,Ui.fg(),true);a.setLetterSpacing(.045f);
+        a.setSingleLine(true);a.setAutoSizeTextTypeUniformWithConfiguration(13,19,1,android.util.TypedValue.COMPLEX_UNIT_SP);title.addView(a);
+        TextView b=Ui.text(this,"СЕТЕВОЙ МОНИТОР",10,Ui.muted(),false);b.setLetterSpacing(.13f);
+        b.setSingleLine(true);b.setAutoSizeTextTypeUniformWithConfiguration(8,10,1,android.util.TypedValue.COMPLEX_UNIT_SP);title.addView(b);
         l.addView(title,new LinearLayout.LayoutParams(0,-2,1));
-        status=Ui.chip(this,"● ГОТОВ",false);status.setTextSize(10);status.setClickable(false);l.addView(status);
+        status=Ui.chip(this,"● ГОТОВ",false);status.setTextSize(10);status.setSingleLine(true);
+        status.setAutoSizeTextTypeUniformWithConfiguration(8,10,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+        status.setClickable(false);l.addView(status);
         root.addView(l);root.addView(Ui.divider(this),Ui.margins(-1,1,0,0));
         refreshStatus();
     }
