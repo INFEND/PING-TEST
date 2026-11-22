@@ -11,5 +11,8 @@ assert 'new ForegroundColorSpan(QualityColors.GREEN)' in page
 assert 'new ForegroundColorSpan(QualityColors.YELLOW)' in page
 assert 'new ForegroundColorSpan(QualityColors.RED)' in page
 assert 'graph=new GraphView(this)' in page
-assert "versionCode 269" in Path("app/build.gradle").read_text(encoding="utf-8")
+import re
+build = Path("app/build.gradle").read_text(encoding="utf-8")
+match = re.search(r"\bversionCode\s+(\d+)\b", build)
+assert match and int(match.group(1)) >= 269, "Graph legend UI regression requires versionCode >= 269"
 print("PASS: graph legend wraps, keeps colors and accessibility")
