@@ -681,8 +681,13 @@ public final class MainActivity extends Activity {
             journalFollowTail=false;journalUserTouching=false;});
         dialog.setContentView(frame);dialog.show();
         Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            w.setLayout(getResources().getDisplayMetrics().widthPixels-Ui.dp(24),
-                (int)(getResources().getDisplayMetrics().heightPixels*.77f));}
+            // Bound the journal to the usable window area, not the raw screen height.
+            // This leaves room for system bars and IME while ScrollView retains its weight.
+            android.graphics.Rect visible=new android.graphics.Rect();
+            w.getDecorView().getWindowVisibleDisplayFrame(visible);
+            int availableHeight=visible.height()>0?visible.height():getResources().getDisplayMetrics().heightPixels;
+            int journalHeight=Math.min((int)(availableHeight*.85f),Ui.dp(640));
+            w.setLayout(getResources().getDisplayMetrics().widthPixels-Ui.dp(24),journalHeight);}
         refreshJournal();handler.removeCallbacks(journalTick);handler.postDelayed(journalTick,140);
     }
     private void stopJournalScrollAnimation(){
