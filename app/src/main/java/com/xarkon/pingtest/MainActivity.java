@@ -220,7 +220,12 @@ public final class MainActivity extends Activity {
         LinearLayout display=Ui.panel(this);display.setPadding(Ui.dp(15),Ui.dp(13),Ui.dp(15),Ui.dp(12));
         LinearLayout heading=Ui.horizontal(this);heading.addView(label("ТЕКУЩАЯ ЗАДЕРЖКА"),new LinearLayout.LayoutParams(0,-2,1));
         qualityState=Ui.text(this,"ОЖИДАНИЕ",10,QualityColors.UNKNOWN,true);
-        qualityState.setLetterSpacing(.08f);heading.addView(qualityState);display.addView(heading);
+        qualityState.setLetterSpacing(.08f);
+        // Keep long quality labels within the live metric header at larger font scales.
+        qualityState.setSingleLine(true);
+        qualityState.setAutoSizeTextTypeUniformWithConfiguration(8,10,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+        qualityState.setMaxWidth(Ui.dp(122));
+        heading.addView(qualityState);display.addView(heading);
         LinearLayout big=Ui.horizontal(this);
         last=new Metric("—",44,QualityColors.UNKNOWN,0);big.addView(last,new LinearLayout.LayoutParams(0,-2,1));
         last.setMinimumHeight(Ui.dp(64));
@@ -301,6 +306,9 @@ public final class MainActivity extends Activity {
         title.setGravity(Gravity.CENTER);title.setLetterSpacing(.07f);cell.addView(title);
         TextView value=Ui.text(this,"—",15,QualityColors.UNKNOWN,true);
         value.setGravity(Gravity.CENTER);value.setFontFeatureSettings("tnum");
+        // Keep full min/avg/max values readable inside three equal-width cards.
+        value.setSingleLine(true);
+        value.setAutoSizeTextTypeUniformWithConfiguration(10,15,1,android.util.TypedValue.COMPLEX_UNIT_SP);
         cell.addView(value,Ui.margins(-1,-2,5,0));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);
         if(parent.getChildCount()<2)lp.rightMargin=Ui.dp(7);
