@@ -419,8 +419,15 @@ public final class MainActivity extends Activity {
                     chosen?AppPrefs.accent(this):Ui.muted(),Ui.dp(22));
             row.addView(glyph,Ui.margins(24,24,0,0));
             LinearLayout labels=Ui.vertical(this);labels.setPadding(Ui.dp(11),0,Ui.dp(4),0);
-            labels.addView(Ui.text(this,target.name,14,Ui.fg(),true));
-            TextView sub=Ui.text(this,target.note,10,Ui.muted(),false);sub.setMaxLines(2);
+            // Custom names can be arbitrarily long: keep the edit/check controls on screen.
+            TextView targetName=Ui.text(this,target.name,14,Ui.fg(),true);
+            targetName.setSingleLine(true);
+            targetName.setEllipsize(TextUtils.TruncateAt.END);
+            targetName.setAutoSizeTextTypeUniformWithConfiguration(11,14,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+            labels.addView(targetName);
+            TextView sub=Ui.text(this,target.note,10,Ui.muted(),false);
+            sub.setMaxLines(2);
+            sub.setEllipsize(TextUtils.TruncateAt.END);
             labels.addView(sub,Ui.margins(-1,-2,0,0));
             row.addView(labels,new LinearLayout.LayoutParams(0,-2,1));
             if(chosen)row.addView(icon(R.drawable.ic_check,QualityColors.GREEN,Ui.dp(19)),Ui.margins(21,21,0,0));
