@@ -148,9 +148,7 @@ public final class MainActivity extends Activity {
         l.addView(title,new LinearLayout.LayoutParams(0,-2,1));
         status=Ui.chip(this,"● ГОТОВ",false);status.setTextSize(10);status.setSingleLine(true);
         status.setAutoSizeTextTypeUniformWithConfiguration(8,10,1,android.util.TypedValue.COMPLEX_UNIT_SP);
-        status.setClickable(false);status.setFocusable(false);
-        status.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        l.addView(status);
+        status.setClickable(false);status.setFocusable(false);l.addView(status);
         root.addView(l);root.addView(Ui.divider(this),Ui.margins(-1,1,0,0));
         refreshStatus();
     }
