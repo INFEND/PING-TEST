@@ -169,6 +169,9 @@ public final class MainActivity extends Activity {
             glyph.setImageTintList(ColorStateList.valueOf(selected?AppPrefs.accent(this):Ui.muted()));
             cell.addView(glyph,new LinearLayout.LayoutParams(Ui.dp(29),Ui.dp(29)));
             TextView label=Ui.text(this,names[i],11,selected?Ui.fg():Ui.muted(),selected);
+            // Keep all three navigation captions visible with large font scaling or narrow screens.
+            label.setSingleLine(true);
+            label.setAutoSizeTextTypeUniformWithConfiguration(9,11,1,android.util.TypedValue.COMPLEX_UNIT_SP);
             label.setGravity(Gravity.CENTER);cell.addView(label);
             if(selected)cell.setBackground(Ui.shape(Ui.surface2(this),Ui.dp(13),0));
             // Expose one named, selected tab to accessibility services; decorative icon/text stay inside it.
