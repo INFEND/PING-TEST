@@ -209,7 +209,11 @@ public final class MainActivity extends Activity {
         ip.setAutoSizeTextTypeUniformWithConfiguration(9,11,1,android.util.TypedValue.COMPLEX_UNIT_SP);
         target.addView(ip,Ui.margins(-1,-2,0,9));
         go=Ui.button(this,"НАЧАТЬ ПРОВЕРКУ  ›",true);go.setTextSize(13);
-        go.setPadding(Ui.dp(8),Ui.dp(11),Ui.dp(8),Ui.dp(11));target.addView(go);
+        go.setPadding(Ui.dp(8),Ui.dp(11),Ui.dp(8),Ui.dp(11));
+        // Keep the primary action readable at large font scales and narrow widths.
+        go.setMaxLines(2);go.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_HIGH_QUALITY);
+        go.setAutoSizeTextTypeUniformWithConfiguration(10,13,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+        target.addView(go);
         go.setOnClickListener(v->toggle());
         page.addView(target,Ui.margins(-1,-2,0,11));
         // A single large, legible live panel, with fractional metrics animated.
