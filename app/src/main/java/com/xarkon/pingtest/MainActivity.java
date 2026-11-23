@@ -278,6 +278,8 @@ public final class MainActivity extends Activity {
         value.setGravity(index==0?Gravity.START:index==1?Gravity.CENTER:Gravity.END);
         value.setFontFeatureSettings("tnum");
         value.setSingleLine(true);
+        // Keep live statistics readable on narrow screens and with large system fonts.
+        value.setAutoSizeTextTypeUniformWithConfiguration(10,22,1,android.util.TypedValue.COMPLEX_UNIT_SP);
         value.setMinHeight(Ui.dp(29));
         col.addView(value,Ui.margins(-1,-2,0,0));
         parent.addView(col,new LinearLayout.LayoutParams(0,-2,1));
