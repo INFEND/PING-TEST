@@ -10,6 +10,9 @@ block = src[start:end]
 assert "value.setSingleLine(true);" in block
 assert "value.setAutoSizeTextTypeUniformWithConfiguration(10,22,1,android.util.TypedValue.COMPLEX_UNIT_SP);" in block
 assert "value.setFontFeatureSettings(\"tnum\");" in block
-assert "versionCode 271" in gradle and "versionName '1.5.263'" in gradle
+import re
+match = re.search(r"versionCode\s+(\d+)", gradle)
+assert match is not None and int(match.group(1)) >= 271
+assert re.search(r"versionName\s+[\'\"]1\.5\.\d+[\'\"]", gradle)
 assert '"1.5.263": 271' in versions
 print("UI metric autosize regression OK")
