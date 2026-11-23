@@ -128,7 +128,7 @@ public final class MainActivity extends Activity {
         root.addView(scroller,new LinearLayout.LayoutParams(-1,0,1));
         if(tab==0)pingPage();else if(tab==1)historyPage();else settingsPage();
         navigation();
-        if(!noEntrance&&AppPrefs.bool(this,"motion",true)){
+        if(!noEntrance&&AppPrefs.bool(this,"motion",true)&&ValueAnimator.areAnimatorsEnabled()){
             page.setAlpha(.45f);page.setTranslationY(Ui.dp(7));page.animate().alpha(1).translationY(0).setDuration(190)
                 .setInterpolator(new DecelerateInterpolator(1.35f)).start();
         }
