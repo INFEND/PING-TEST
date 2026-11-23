@@ -330,7 +330,7 @@ public final class MainActivity extends Activity {
         if(s.active!=activeBefore||renderedVersion<0){activeBefore=s.active;
             go.setText(s.active?"■  ОСТАНОВИТЬ":"НАЧАТЬ ПРОВЕРКУ  ›");
             go.setBackground(Ui.shape(s.active?Ui.surface2(this):AppPrefs.accent(this),Ui.dp(12),s.active?Ui.border():0));
-            go.setTextColor(s.active?Ui.fg():0xFF061216);
+            go.setTextColor(s.active?Ui.fg():Ui.onAccent(this));
         }
         if(s.version==renderedVersion&&s.id==seenSession)return;
         boolean sameSession=s.id==seenSession;renderedVersion=s.version;seenSession=s.id;
