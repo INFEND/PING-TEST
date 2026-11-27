@@ -8,8 +8,8 @@ android {
         applicationId 'com.xarkon.pingtest'
         minSdk 26
         targetSdk 35
-        versionCode 278
-        versionName '1.5.270'
+        versionCode 279
+        versionName '1.5.271'
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

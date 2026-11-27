@@ -213,6 +213,7 @@ public final class MainActivity extends Activity {
         // Keep the primary action readable at large font scales and narrow widths.
         go.setMaxLines(2);go.setBreakStrategy(android.text.Layout.BREAK_STRATEGY_HIGH_QUALITY);
         go.setAutoSizeTextTypeUniformWithConfiguration(10,13,1,android.util.TypedValue.COMPLEX_UNIT_SP);
+        styleMonitorAction(false);
         target.addView(go);
         go.setOnClickListener(v->toggle());
         page.addView(target,Ui.margins(-1,-2,0,11));
@@ -341,8 +342,7 @@ public final class MainActivity extends Activity {
         idleMismatchHost=null;
         if(s.active!=activeBefore||renderedVersion<0){activeBefore=s.active;
             go.setText(s.active?"■  ОСТАНОВИТЬ":"НАЧАТЬ ПРОВЕРКУ  ›");
-            go.setBackground(Ui.shape(s.active?Ui.surface2(this):AppPrefs.accent(this),Ui.dp(12),s.active?Ui.border():0));
-            go.setTextColor(s.active?Ui.fg():Ui.onAccent(this));
+            styleMonitorAction(s.active);
         }
         if(s.version==renderedVersion&&s.id==seenSession)return;
         boolean sameSession=s.id==seenSession;renderedVersion=s.version;seenSession=s.id;
@@ -371,6 +371,19 @@ public final class MainActivity extends Activity {
         else if(!s.warning.isEmpty()){info.setText("МАРШРУТ  •  "+s.warning+"  ›");info.setTextColor(BAD);}
         else if(s.skipped>0){info.setText("Пропущено проверок: "+s.skipped);info.setTextColor(Ui.muted());}
         else{info.setText("Ответ может зависеть от ограничений ICMP на сервере.");info.setTextColor(Ui.muted());}
+    }
+    /** Primary monitor action only: contrast-safe label and bounded press feedback. */
+    private void styleMonitorAction(boolean active){
+        int fill=active?Ui.surface2(this):AppPrefs.accent(this);
+        int foreground=active?Ui.fg():AccentContrast.readableText(fill);
+        // For accent fills, the ripple moves the background away from the text color.
+        int feedback=active?((foreground&0x00ffffff)|0x20000000):
+            (foreground==Color.WHITE?0x24000000:0x24ffffff);
+        go.setBackground(new android.graphics.drawable.RippleDrawable(
+            ColorStateList.valueOf(feedback),
+            Ui.shape(fill,Ui.dp(12),active?Ui.border():0),
+            Ui.shape(Color.WHITE,Ui.dp(12),0)));
+        go.setTextColor(foreground);
     }
     private String fmt(double value){return String.format(Locale.US,"%.1f",value);}
     private void toggle(){PingService.Snapshot s=PingService.snapshot();
